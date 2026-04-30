@@ -645,7 +645,10 @@ static int pause_action(int i)
     switch(i)
     {
     case PAUSE_CONTINUE:
-        return goto_state(st_continue ? st_continue : &st_title);
+        if (st_continue)
+            return goto_state(st_continue);
+        else
+            return exit_state(&st_title);
 
     case PAUSE_QUIT:
         return goto_state(st_quit);
@@ -1352,7 +1355,7 @@ static int score_click(int b, int d)
         if (hole_move())
             return goto_state(&st_next);
         else
-            return goto_state(&st_title);
+            return exit_state(&st_title);
     }
     return 1;
 }
@@ -1366,7 +1369,7 @@ static int score_buttn(int b, int d)
             if (hole_move())
                 goto_state(&st_next);
             else
-                goto_state(&st_title);
+                exit_state(&st_title);
         }
         if (config_tst_d(CONFIG_JOYSTICK_BUTTON_B, b))
             return goto_pause(&st_over);
@@ -1400,7 +1403,7 @@ static void over_timer(int id, float dt)
 
 static int over_click(int b, int d)
 {
-    return (d && b == SDL_BUTTON_LEFT) ? goto_state(&st_title) : 1;
+    return (d && b == SDL_BUTTON_LEFT) ? exit_state(&st_title) : 1;
 }
 
 static int over_buttn(int b, int d)
@@ -1408,9 +1411,9 @@ static int over_buttn(int b, int d)
     if (d)
     {
         if (config_tst_d(CONFIG_JOYSTICK_BUTTON_A, b))
-            return goto_state(&st_title);
+            return exit_state(&st_title);
         if (config_tst_d(CONFIG_JOYSTICK_BUTTON_B, b))
-            return goto_state(&st_title);
+            return exit_state(&st_title);
     }
     return 1;
 }
