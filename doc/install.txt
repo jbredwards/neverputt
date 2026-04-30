@@ -4,6 +4,7 @@
 
 * REQUIREMENTS
 
+    gcc               http://gcc.gnu.org/
     SDL 2.0           http://libsdl.org/download-2.0.php
     SDL2_ttf          http://libsdl.org/projects/SDL_ttf/
     libvorbis         http://xiph.org/vorbis/
