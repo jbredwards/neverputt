@@ -254,6 +254,7 @@ static int title_enter(struct state *st, struct state *prev, int intent)
 
     course_init();
     course_rand();
+    audio_music_fade_to(0.5f, "bgm/title.ogg");
 
     return transition_slide(root_id, 1, intent);
 }
@@ -415,6 +416,7 @@ static int course_enter(struct state *st, struct state *prev, int intent)
     }
 
     audio_music_fade_to(0.5f, "bgm/inter.ogg");
+    audio_play("snd/select.ogg", 1.0f);
 
     return transition_slide(id, 1, intent);
 }
