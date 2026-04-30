@@ -22,6 +22,7 @@
 #include "audio.h"
 #include "config.h"
 #include "video.h"
+#include "common.h"
 #include "version.h"
 #include "lang.h"
 
@@ -33,25 +34,52 @@
 
 enum
 {
-    CONF_VIDEO = 1,
+    CONF_VIDEO = GUI_LAST,
     CONF_LANG,
-    CONF_BACK
+    CONF_MOUSE_SENSE,
+    CONF_JOYSTICK,
+    CONF_SOUND_VOLUME,
+    CONF_MUSIC_VOLUME
 };
 
+static int mouse_id[11];
 static int music_id[11];
 static int sound_id[11];
 
-static int conf_action(int i)
+/*
+ * This maps mouse_sense 300 (default) to the 7th of an 11 button
+ * series. Effectively there are more options for a lower-than-default
+ * sensitivity than for a higher one.
+ */
+
+#define MOUSE_RANGE_MIN  100
+#define MOUSE_RANGE_INC  50
+#define MOUSE_RANGE_MAX (MOUSE_RANGE_MIN + (MOUSE_RANGE_INC * 10))
+
+/*
+ * Map mouse_sense values to [0, 10]. A higher mouse_sense value means
+ * lower sensitivity, thus counter-intuitively, 0 maps to the higher
+ * value.
+ */
+
+#define MOUSE_RANGE_MAP(m) \
+    CLAMP(0, (MOUSE_RANGE_MAX - m) / MOUSE_RANGE_INC, 10)
+
+#define MOUSE_RANGE_UNMAP(i) \
+    (MOUSE_RANGE_MAX - (i * MOUSE_RANGE_INC))
+
+static int conf_action(int tok, int val)
 {
-    int s = config_get_d(CONFIG_SOUND_VOLUME);
-    int m = config_get_d(CONFIG_MUSIC_VOLUME);
+    int sound = config_get_d(CONFIG_SOUND_VOLUME);
+    int music = config_get_d(CONFIG_MUSIC_VOLUME);
+    int mouse = MOUSE_RANGE_MAP(config_get_d(CONFIG_MOUSE_SENSE));
     int r = 1;
 
     audio_play(AUD_MENU, 1.0f);
 
-    switch (i)
+    switch (tok)
     {
-    case CONF_BACK:
+    case GUI_BACK:
         exit_state(&st_title);
         break;
 
@@ -59,195 +87,129 @@ static int conf_action(int i)
         goto_state(&st_video);
         break;
 
+    case CONF_JOYSTICK:
+        goto_state(&st_joystick);
+        break;
+
     case CONF_LANG:
         goto_state(&st_lang);
         break;
 
-    default:
-        if (100 <= i && i <= 110)
-        {
-            int n = i - 100;
+    case CONF_MOUSE_SENSE:
+        config_set_d(CONFIG_MOUSE_SENSE, MOUSE_RANGE_UNMAP(val));
 
-            config_set_d(CONFIG_SOUND_VOLUME, n);
-            audio_volume(n, m);
-            audio_play(AUD_BUMP, 1.f);
+        gui_toggle(mouse_id[val]);
+        gui_toggle(mouse_id[mouse]);
+        break;
 
-            gui_toggle(sound_id[n]);
-            gui_toggle(sound_id[s]);
-        }
-        if (200 <= i && i <= 210)
-        {
-            int n = i - 200;
+    case CONF_SOUND_VOLUME:
+        config_set_d(CONFIG_SOUND_VOLUME, val);
+        audio_volume(val, music);
+        audio_play("snd/bump.ogg", 1.f);
 
-            config_set_d(CONFIG_MUSIC_VOLUME, n);
-            audio_volume(s, n);
-            audio_play(AUD_BUMP, 1.f);
+        gui_toggle(sound_id[val]);
+        gui_toggle(sound_id[sound]);
+        break;
 
-            gui_toggle(music_id[n]);
-            gui_toggle(music_id[m]);
-        }
+    case CONF_MUSIC_VOLUME:
+        config_set_d(CONFIG_MUSIC_VOLUME, val);
+        audio_volume(sound, val);
+        audio_play("snd/bump.ogg", 1.f);
+
+        gui_toggle(music_id[val]);
+        gui_toggle(music_id[music]);
+
+        break;
     }
 
     return r;
 }
 
-static int conf_enter(struct state *st, struct state *prev, int intent)
+static int conf_gui(void)
 {
     int root_id;
-
-    back_init("back/gui.png");
 
     /* Initialize the configuration GUI. */
 
     if ((root_id = gui_root()))
     {
-        int id, jd, kd;
-        int i;
+        int id;
 
         if ((id = gui_vstack(root_id)))
         {
-            if ((jd = gui_harray(id)))
-            {
-                gui_label(jd, _("Options"), GUI_SML, 0, 0);
-                gui_space(jd);
-                gui_start(jd, _("Back"),    GUI_SML, CONF_BACK, 0);
-            }
+            int sound = config_get_d(CONFIG_SOUND_VOLUME);
+            int music = config_get_d(CONFIG_MUSIC_VOLUME);
+            int mouse = MOUSE_RANGE_MAP(config_get_d(CONFIG_MOUSE_SENSE));
+
+            int lang_id;
+
+            conf_header(id, _("Options"), GUI_BACK);
+
+            conf_state(id, _("Graphics"), _("Configure"), CONF_VIDEO);
 
             gui_space(id);
 
-            if ((jd = gui_harray(id)) &&
-                (kd = gui_harray(jd)))
-            {
-                gui_state(kd, _("Configure"), GUI_SML, CONF_VIDEO, 0);
-
-                gui_label(jd, _("Graphics"),  GUI_SML, 0, 0);
-            }
+            conf_slider(id, _("Mouse Sensitivity"), CONF_MOUSE_SENSE, mouse,
+                        mouse_id, ARRAYSIZE(mouse_id));
 
             gui_space(id);
 
-            if ((jd = gui_harray(id)) &&
-                (kd = gui_harray(jd)))
-            {
-                /* A series of empty buttons forms the sound volume control. */
-
-                int s = config_get_d(CONFIG_SOUND_VOLUME);
-
-                for (i = 10; i >= 0; i--)
-                {
-                    sound_id[i] = gui_state(kd, NULL, GUI_SML, 100 + i, 0);
-                    gui_set_hilite(sound_id[i], (s == i));
-                }
-
-                gui_label(jd, _("Sound Volume"), GUI_SML, 0, 0);
-            }
-
-            if ((jd = gui_harray(id)) &&
-                (kd = gui_harray(jd)))
-            {
-                /* A series of empty buttons forms the music volume control. */
-
-                int m = config_get_d(CONFIG_MUSIC_VOLUME);
-
-                for (i = 10; i >= 0; i--)
-                {
-                    music_id[i] = gui_state(kd, NULL, GUI_SML, 200 + i, 0);
-                    gui_set_hilite(music_id[i], (m == i));
-                }
-
-                gui_label(jd, _("Music Volume"), GUI_SML, 0, 0);
-            }
+            conf_state(id, _("Gamepad"), _("Configure"), CONF_JOYSTICK);
 
             gui_space(id);
 
-            if ((jd = gui_harray(id)) &&
-                (kd = gui_harray(jd)))
-            {
-                gui_state(kd, _("Select"), GUI_SML, CONF_LANG, 0);
+            conf_slider(id, _("Sound Volume"), CONF_SOUND_VOLUME, sound,
+                        sound_id, ARRAYSIZE(sound_id));
+            conf_slider(id, _("Music Volume"), CONF_MUSIC_VOLUME, music,
+                        music_id, ARRAYSIZE(music_id));
 
-                gui_label(jd, _("Language"),  GUI_SML, 0, 0);
-            }
+            gui_space(id);
+
+            lang_id = conf_state(id, _("Language"), " ", CONF_LANG);
 
             gui_layout(id, 0, 0);
+
+            gui_set_trunc(lang_id, TRUNC_TAIL);
+            
+            if (*config_get_s(CONFIG_LANGUAGE))
+                gui_set_label(lang_id, lang_name(&curr_lang));
+            else
+                gui_set_label(lang_id, _("Default"));
         }
 
         if ((id = gui_vstack(root_id)))
         {
             gui_label(id, "Neverputt " VERSION, GUI_TNY, gui_wht, gui_wht);
+            gui_multi(id, _(
+                "Copyright © 2026 Neverputt authors\n"
+                "Neverputt is free software available under the terms of GPL v2 or later."
+            ), GUI_TNY, gui_wht, gui_wht);
+
             gui_clr_rect(id);
             gui_layout(id, 0, -1);
         }
     }
 
-    audio_music_fade_to(0.5f, "bgm/inter.ogg");
-
-    return transition_slide(root_id, 1, intent);
+    return root_id;
 }
 
-static int conf_leave(struct state *st, struct state *next, int id, int intent)
+static int conf_enter(struct state *st, struct state *prev, int intent)
 {
-    back_free();
-    return transition_slide(id, 0, intent);
-}
-
-static void conf_paint(int id, float st)
-{
-    video_push_persp((float) config_get_d(CONFIG_VIEW_FOV), 0.1f, FAR_DIST);
-    {
-        back_draw_easy();
-    }
-    video_pop_matrix();
-    gui_paint(id);
-}
-
-static void conf_timer(int id, float dt)
-{
-    gui_timer(id, dt);
-}
-
-static void conf_point(int id, int x, int y, int dx, int dy)
-{
-    gui_pulse(gui_point(id, x, y), 1.2f);
-}
-
-static void conf_stick(int id, int a, float v, int bump)
-{
-    gui_pulse(gui_stick(id, a, v, bump), 1.2f);
-}
-
-static int conf_click(int b, int d)
-{
-    if (gui_click(b, d))
-        return conf_action(gui_token(gui_active()));
-
-    return 1;
-}
-
-static int conf_keybd(int c, int d)
-{
-    return (d && c == SDLK_ESCAPE) ? goto_state(&st_title) : 1;
-}
-
-static int conf_buttn(int b, int d)
-{
-    if (d)
-    {
-        if (config_tst_d(CONFIG_JOYSTICK_BUTTON_A, b))
-            return conf_action(gui_token(gui_active()));
-        if (config_tst_d(CONFIG_JOYSTICK_BUTTON_B, b))
-            return goto_state(&st_title);
-    }
-    return 1;
+    conf_common_init(conf_action);
+    return transition_slide(conf_gui(), 1, intent);
 }
 
 /*---------------------------------------------------------------------------*/
 
 static int null_enter(struct state *st, struct state *prev, int intent)
 {
+    hud_free();
     transition_quit();
     gui_free();
     geom_free();
     ball_free();
     shad_free();
+    part_free();
     mtrl_free_objects();
 
     return 0;
@@ -256,11 +218,13 @@ static int null_enter(struct state *st, struct state *prev, int intent)
 static int null_leave(struct state *st, struct state *next, int id, int intent)
 {
     mtrl_load_objects();
+    part_init();
     shad_init();
     ball_init();
     geom_init();
     gui_init();
     transition_init();
+    hud_init();
     return 0;
 }
 
@@ -268,15 +232,15 @@ static int null_leave(struct state *st, struct state *next, int id, int intent)
 
 struct state st_conf = {
     conf_enter,
-    conf_leave,
-    conf_paint,
-    conf_timer,
-    conf_point,
-    conf_stick,
+    conf_common_leave,
+    conf_common_paint,
+    common_timer,
+    common_point,
+    common_stick,
     NULL,
-    conf_click,
-    conf_keybd,
-    conf_buttn
+    common_click,
+    common_keybd,
+    common_buttn
 };
 
 struct state st_null = {
