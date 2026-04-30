@@ -224,7 +224,12 @@ static int title_enter(struct state *st, struct state *prev, int intent)
     {
         if ((id = gui_vstack(root_id)))
         {
-            gui_label(id, "Neverputt", GUI_LRG, 0, 0);
+            if ((jd = gui_label(id, "Neverputt", GUI_LRG, 0, 0)))
+            {
+                gui_set_fill(jd);
+                gui_set_slide(jd, GUI_N | GUI_FLING | GUI_EASE_ELASTIC, 0, 1.6f, 0);
+            }
+
             gui_space(id);
 
             if ((jd = gui_harray(id)))
@@ -236,6 +241,7 @@ static int title_enter(struct state *st, struct state *prev, int intent)
                     gui_start(kd, gt_prefix("menu^Play"),    GUI_MED, TITLE_PLAY, 1);
                     gui_state(kd, gt_prefix("menu^Options"), GUI_MED, TITLE_CONF, 0);
                     gui_state(kd, gt_prefix("menu^Exit"),    GUI_MED, TITLE_EXIT, 0);
+                    gui_set_slide(kd, GUI_N | GUI_EASE_ELASTIC, 0.8f, 1.0f, 0.05f);
                 }
 
                 gui_filler(jd);
@@ -247,7 +253,8 @@ static int title_enter(struct state *st, struct state *prev, int intent)
         if ((id = gui_label(root_id, "Neverputt " VERSION, GUI_TNY, gui_wht2, gui_wht2)))
         {
             gui_clr_rect(id);
-            gui_layout(id, -1, -1);
+            gui_set_slide(id, GUI_S, 0.85f, 0.4f, 0);
+            gui_layout(id, 0, -1);
         }
 #endif
     }
@@ -256,7 +263,11 @@ static int title_enter(struct state *st, struct state *prev, int intent)
     course_rand();
     audio_music_fade_to(0.5f, "bgm/title.ogg");
 
-    return transition_slide(root_id, 1, intent);
+
+    if (intent == INTENT_BACK)
+        return transition_slide(root_id, 1, intent);
+    
+    return root_id;
 }
 
 static int title_leave(struct state *st, struct state *next, int id, int intent)
