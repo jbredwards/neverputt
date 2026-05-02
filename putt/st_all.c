@@ -625,6 +625,7 @@ static struct state *st_quit;
 
 #define PAUSE_CONTINUE 1
 #define PAUSE_QUIT     2
+#define PAUSE_SCORE    3
 
 int goto_pause(struct state *s)
 {
@@ -645,13 +646,11 @@ static int pause_action(int i)
     switch(i)
     {
     case PAUSE_CONTINUE:
-        if (st_continue)
-            return goto_state(st_continue);
-        else
-            return exit_state(&st_title);
-
+        return exit_state(st_continue ? st_continue : &st_title);
     case PAUSE_QUIT:
         return goto_state(st_quit);
+    case PAUSE_SCORE:
+        return goto_state(&st_score);
     }
     return 1;
 }
@@ -670,6 +669,7 @@ static int pause_enter(struct state *st, struct state *prev, int intent)
         if ((jd = gui_harray(id)))
         {
             gui_state(jd, _("Quit"), GUI_SML, PAUSE_QUIT, 0);
+            gui_state(jd, _("Scores"), GUI_SML, PAUSE_SCORE, 0);
             gui_start(jd, _("Continue"), GUI_SML, PAUSE_CONTINUE, 1);
         }
 
@@ -1326,7 +1326,7 @@ static int score_enter(struct state *st, struct state *prev, int intent)
 {
     audio_music_fade_out(2.f);
 
-    if (paused)
+    if (paused && (prev != &st_pause || intent == INTENT_BACK))
         paused = 0;
 
     return transition_slide(score_card(_("Scores"), gui_yel, gui_red), 1, intent);
@@ -1352,7 +1352,9 @@ static int score_click(int b, int d)
 {
     if (b == SDL_BUTTON_LEFT && d == 1)
     {
-        if (hole_move())
+        if (paused)
+            return exit_state(&st_pause);
+        else if (hole_move())
             return goto_state(&st_next);
         else
             return exit_state(&st_title);
@@ -1366,7 +1368,9 @@ static int score_buttn(int b, int d)
     {
         if (config_tst_d(CONFIG_JOYSTICK_BUTTON_A, b))
         {
-            if (hole_move())
+            if (paused)
+                exit_state(&st_pause);
+            else if (hole_move())
                 goto_state(&st_next);
             else
                 exit_state(&st_title);
