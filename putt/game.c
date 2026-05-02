@@ -28,6 +28,7 @@
 #include "config.h"
 #include "video.h"
 
+#include "common_draw.h"
 #include "solid_draw.h"
 #include "solid_sim.h"
 #include "solid_all.h"
@@ -126,6 +127,21 @@ void game_free(void)
 
 /*---------------------------------------------------------------------------*/
 
+static void game_draw_back(struct s_rend *rend, int pose, int d, float t)
+{
+    if (pose == POSE_BALL)
+        return;
+
+    /* Center the skybox about the position of the camera. */
+
+    glPushMatrix();
+    {
+        glTranslatef(view_p[0], view_p[1], view_p[2]);
+        back_draw(rend);
+    }
+    glPopMatrix();
+}
+
 static void game_draw_vect(struct s_rend *rend, const struct s_vary *fp)
 {
     if (view_m > 0.f)
@@ -146,10 +162,10 @@ static void game_draw_vect(struct s_rend *rend, const struct s_vary *fp)
 }
 
 static void game_draw_balls(struct s_rend *rend,
-                            const struct s_vary *fp,
-                            const float *bill_M, float t)
+                            struct s_vary *fp,
+                            float *bill_M, int d, float t)
 {
-    static const GLfloat color[5][4] = {
+    static GLfloat color[5][4] = {
         { 1.0f, 1.0f, 1.0f, 0.7f },
         { 1.0f, 0.0f, 0.0f, 1.0f },
         { 0.0f, 1.0f, 0.0f, 1.0f },
@@ -165,28 +181,7 @@ static void game_draw_balls(struct s_rend *rend,
     {
         if (ui == ball)
         {
-            float ball_M[16];
-            float pend_M[16];
-
-            m_basis(ball_M, fp->uv[ui].e[0], fp->uv[ui].e[1], fp->uv[ui].e[2]);
-            m_basis(pend_M, fp->uv[ui].E[0], fp->uv[ui].E[1], fp->uv[ui].E[2]);
-
-            glPushMatrix();
-            {
-                glTranslatef(fp->uv[ui].p[0],
-                             fp->uv[ui].p[1] + BALL_FUDGE,
-                             fp->uv[ui].p[2]);
-                glScalef(fp->uv[ui].r,
-                         fp->uv[ui].r,
-                         fp->uv[ui].r);
-
-                glColor4f(color[ui][0],
-                          color[ui][1],
-                          color[ui][2],
-                          color[ui][3]);
-                ball_draw(rend, ball_M, pend_M, bill_M, t);
-            }
-            glPopMatrix();
+            common_draw_balls(rend, bill_M, t, fp->uv[ui], color[ui]);
         }
         else
         {
@@ -211,6 +206,9 @@ static void game_draw_balls(struct s_rend *rend,
 
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
     r_color_mtrl(rend, 0);
+
+    if (d != -1)
+        game_draw_vect(rend, fp);
 }
 
 static void game_draw_flags(struct s_rend *rend, const struct s_base *fp)
@@ -221,134 +219,42 @@ static void game_draw_flags(struct s_rend *rend, const struct s_base *fp)
         flag_draw(rend, fp->zv[zi].p);
 }
 
-static void game_draw_beams(struct s_rend *rend, const struct s_base *bp,
-                                                 const struct s_vary *vp)
+static void game_draw_beams(struct s_rend *rend, struct s_base *bp, struct s_vary *vp)
 {
-    static const GLfloat jump_c[2][4]    =  {{ 0.7f, 0.5f, 1.0f, 0.5f },
-                                             { 0.7f, 0.5f, 1.0f, 0.8f }};
-    static const GLfloat swch_c[2][2][4] = {{{ 1.0f, 0.0f, 0.0f, 0.5f },
-                                             { 1.0f, 0.0f, 0.0f, 0.8f }},
-                                            {{ 0.0f, 1.0f, 0.0f, 0.5f },
-                                             { 0.0f, 1.0f, 0.0f, 0.8f }}};
+    static GLfloat goal_c[4] = { 1.0f, 1.0f, 0.0f, 0.5f };
 
-    int i;
-
-    /* Jump beams */
-
-    for (i = 0; i < bp->jc; i++)
-        beam_draw(rend, bp->jv[i].p, jump_c[jump_e ? 0 : 1],
-                        bp->jv[i].r, 2.0f);
-
-    /* Switch beams */
-
-    for (i = 0; i < vp->xc; i++)
-    {
-        struct v_swch *xp = vp->xv + i;
-
-        if (!xp->base->i)
-            beam_draw(rend, xp->base->p, swch_c[xp->f][xp->e],
-                            xp->base->r, 2.0f);
-    }
+    game_draw_flags(rend, bp);
+    common_draw_beams(rend, bp, vp, jump_e, 0, 0.8f, goal_c);
 }
 
 /*---------------------------------------------------------------------------*/
 
-static void game_shadow_conf(int enable)
-{
-    if (enable && config_get_d(CONFIG_SHADOW))
-    {
-        tex_env_select(&tex_env_shadow_clip,
-                       &tex_env_shadow,
-                       &tex_env_default,
-                       NULL);
-    }
-    else
-    {
-        tex_env_active(&tex_env_default);
-    }
-}
+struct renderer r_instance = {
+    game_draw_back,
+    game_draw_balls,
+    game_draw_beams,
+    NULL,
+    NULL,
+    NULL
+};
 
 void game_draw(int pose, float t)
 {
-    const float light_p[4] = { 8.f, 32.f, 8.f, 0.f };
-
-    struct s_draw *fp = &file.draw;
-    struct s_rend rend;
-
-    float fov = FOV;
-
     if (!state)
         return;
 
-    fp->shadow_ui = ball;
-
-    game_shadow_conf(1);
-    r_draw_enable(&rend);
-
+    float fov = FOV;
     if (jump_b) fov *= 2.0f * fabsf(jump_dt - 0.5f);
 
-    video_push_persp(fov, 0.1f, FAR_DIST);
-    glPushMatrix();
-    {
-        float T[16], M[16], v[3], c[3];
+    /* In VR, move the view center up to keep the viewer level. */
 
-        /* In VR, move the view center up to keep the viewer level. */
+    float c[3];
+    v_cpy(c, view_c);
 
-        v_cpy(c, view_c);
+    if (hmd_stat())
+        c[1] += view_dy;
 
-        if (hmd_stat())
-            c[1] += view_dy;
-
-        video_calc_view(T, c, view_p, view_e[1]);
-        m_xps(M, T);
-
-        v_sub(v, c, view_p);
-
-        glTranslatef(0.f, 0.f, -v_len(v));
-        glMultMatrixf(M);
-        glTranslatef(-c[0], -c[1], -c[2]);
-
-        /* Center the skybox about the position of the camera. */
-
-        glPushMatrix();
-        {
-            glTranslatef(view_p[0], view_p[1], view_p[2]);
-            back_draw(&rend);
-        }
-        glPopMatrix();
-
-        glEnable(GL_LIGHT0);
-        glLightfv(GL_LIGHT0, GL_POSITION, light_p);
-
-        /* Draw the floor. */
-
-        sol_draw(fp, &rend, 0, 1);
-
-        /* Draw the game elements. */
-
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        if (pose == 0)
-        {
-            game_draw_balls(&rend, fp->vary, T, t);
-            game_draw_vect(&rend, fp->vary);
-        }
-
-        glDepthMask(GL_FALSE);
-        {
-            game_draw_flags(&rend, fp->base);
-            game_draw_beams(&rend, fp->base, fp->vary);
-        }
-        glDepthMask(GL_TRUE);
-
-        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-    }
-    glPopMatrix();
-    video_pop_matrix();
-
-    r_draw_disable(&rend);
-    game_shadow_conf(0);
+    common_draw(pose, t, fov, ball, &file.draw, c, view_p, view_e, &r_instance);
 }
 
 /*---------------------------------------------------------------------------*/

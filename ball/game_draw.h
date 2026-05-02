@@ -30,7 +30,7 @@ struct game_draw
 };
 
 /* FIXME: this is just for POSE_* constants. */
-#include "game_client.h"
+#include "common_draw.h"
 
 void game_draw(struct game_draw *, int, float);
 

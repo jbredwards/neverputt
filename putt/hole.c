@@ -21,6 +21,7 @@
 #include "image.h"
 #include "game.h"
 #include "geom.h"
+#include "part.h"
 #include "hud.h"
 #include "audio.h"
 #include "config.h"
@@ -276,7 +277,19 @@ int hole_goto(int h, int p)
 
         if (game_init(hole_v[hole].file))
         {
+            /* Initialize particles. */
+
+            part_reset();
+
+            /* Initialize background. */
+
             back_init(hole_v[hole].back);
+
+            /* Initialize lighting. */
+
+            light_reset();
+
+            /* Initialize players. */
 
             player = (hole - 1) % party + 1;
             done   = 0;

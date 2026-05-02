@@ -333,6 +333,7 @@ BALL_OBJS := \
 	share/package.o     \
 	share/st_package.o  \
 	share/mapclib.o     \
+	share/common_draw.o \
 	ball/hud.o          \
 	ball/game_common.o  \
 	ball/game_client.o  \
@@ -403,6 +404,7 @@ PUTT_OBJS := \
 	share/array.o       \
 	share/log.o         \
 	share/joy.o         \
+	share/common_draw.o \
 	putt/hud.o          \
 	putt/game.o         \
 	putt/hole.o         \

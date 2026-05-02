@@ -5,13 +5,6 @@
 
 /*---------------------------------------------------------------------------*/
 
-enum
-{
-    POSE_NONE = 0,
-    POSE_LEVEL,
-    POSE_BALL
-};
-
 int   game_client_init(const char *);
 void  game_client_free(const char *);
 void  game_client_sync(fs_file);
@@ -29,6 +22,12 @@ void  game_step_fade(float);
 void  game_fade(float);
 
 void game_client_fly(float);
+
+/*---------------------------------------------------------------------------*/
+
+#include "game_draw.h"
+
+struct game_draw *curr_game_draw(void);
 
 /*---------------------------------------------------------------------------*/
 
