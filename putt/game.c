@@ -225,9 +225,22 @@ static void game_draw_balls(struct s_rend *rend,
 static void game_draw_flags(struct s_rend *rend, const struct s_base *fp)
 {
     int zi;
+    float *flag_p;
 
     for (zi = 0; zi < fp->zc; zi++)
-        flag_draw(rend, fp->zv[zi].p);
+    {
+        flag_p = fp->zv[zi].p;
+        glPushMatrix();
+        {
+            /* Rotate goal flags to always face the camera. */
+
+            glTranslatef(flag_p[0], flag_p[1], flag_p[2]);
+            glRotatef(view_a, 0, 1, 0);
+            glTranslatef(-flag_p[0], -flag_p[1], -flag_p[2]);
+            flag_draw(rend, flag_p);
+        }
+        glPopMatrix();
+    }
 }
 
 static void game_draw_beams(struct s_rend *rend, struct s_base *bp, struct s_vary *vp)
