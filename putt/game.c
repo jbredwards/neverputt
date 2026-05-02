@@ -35,6 +35,8 @@
 
 /*---------------------------------------------------------------------------*/
 
+static struct s_full files[MAXPLY];
+
 static struct s_full file;
 static int           ball;
 
@@ -89,7 +91,7 @@ static void view_init(void)
 
 int game_init(const char *s)
 {
-    int i;
+    int i, ui;
 
     jump_e = 1;
     jump_b = 0;
@@ -98,15 +100,17 @@ int game_init(const char *s)
 
     view_init();
 
-    if (!(state = sol_load_full(&file, s, config_get_d(CONFIG_SHADOW))))
+    for (ui = 0; ui < MAXPLY; ui++)
+    {
+    if (!(state = sol_load_full(&files[ui], s, config_get_d(CONFIG_SHADOW))))
         return 0;
 
-    sol_init_sim(&file.vary);
+    sol_init_sim(&files[ui].vary);
 
-    for (i = 0; i < file.base.dc; i++)
+    for (i = 0; i < files[ui].base.dc; i++)
     {
-        const char *k = file.base.av + file.base.dv[i].ai;
-        const char *v = file.base.av + file.base.dv[i].aj;
+        const char *k = files[ui].base.av + files[ui].base.dv[i].ai;
+        const char *v = files[ui].base.av + files[ui].base.dv[i].aj;
 
         if (strcmp(k, "idle") == 0)
         {
@@ -116,13 +120,15 @@ int game_init(const char *s)
                 idle_t = 1.0f;
         }
     }
+    } 
+    
     return 1;
 }
 
 void game_free(void)
 {
     sol_quit_sim();
-    sol_free_full(&file);
+    for (int ui = 0; ui < MAXPLY; ui++) sol_free_full(&files[ui]);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -142,18 +148,18 @@ static void game_draw_back(struct s_rend *rend, int pose, int d, float t)
     glPopMatrix();
 }
 
-static void game_draw_vect(struct s_rend *rend, const struct s_vary *fp)
+static void game_draw_vect(struct s_rend *rend, struct v_ball uv_ball)
 {
     if (view_m > 0.f)
     {
         glPushMatrix();
         {
-            glTranslatef(fp->uv[ball].p[0],
-                         fp->uv[ball].p[1],
-                         fp->uv[ball].p[2]);
+            glTranslatef(uv_ball.p[0],
+                         uv_ball.p[1],
+                         uv_ball.p[2]);
             glRotatef(view_a, 0.0f, 1.0f, 0.0f);
-            glScalef(fp->uv[ball].r,
-                     fp->uv[ball].r * 0.1f, view_m);
+            glScalef(uv_ball.r,
+                     uv_ball.r * 0.1f, view_m);
 
             vect_draw(rend);
         }
@@ -174,25 +180,33 @@ static void game_draw_balls(struct s_rend *rend,
     };
 
     int ui;
+    struct v_ball ui_ball;
 
     r_color_mtrl(rend, 1);
 
     for (ui = curr_party(); ui > 0; ui--)
     {
+        ui_ball = files[ui].draw.vary->uv[ui];
+        
         if (ui == ball)
         {
-            common_draw_balls(rend, bill_M, t, fp->uv[ui], color[ui]);
+            common_draw_balls(rend, bill_M, t, ui_ball, color[ui]);
+
+            /* Draw the aim polygon for the current player. */
+
+            if (d != -1)
+                game_draw_vect(rend, ui_ball);
         }
         else
         {
             glPushMatrix();
             {
-                glTranslatef(fp->uv[ui].p[0],
-                             fp->uv[ui].p[1] - fp->uv[ui].r + BALL_FUDGE,
-                             fp->uv[ui].p[2]);
-                glScalef(fp->uv[ui].r,
-                         fp->uv[ui].r,
-                         fp->uv[ui].r);
+                glTranslatef(ui_ball.p[0],
+                             ui_ball.p[1] - ui_ball.r + BALL_FUDGE,
+                             ui_ball.p[2]);
+                glScalef(ui_ball.r,
+                         ui_ball.r,
+                         ui_ball.r);
 
                 glColor4f(color[ui][0],
                           color[ui][1],
@@ -206,9 +220,6 @@ static void game_draw_balls(struct s_rend *rend,
 
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
     r_color_mtrl(rend, 0);
-
-    if (d != -1)
-        game_draw_vect(rend, fp);
 }
 
 static void game_draw_flags(struct s_rend *rend, const struct s_base *fp)
@@ -581,7 +592,7 @@ void game_ball(int i)
 {
     int ui;
 
-    ball = i;
+    file = files[ball = i];
 
     jump_e = 1;
     jump_b = 0;

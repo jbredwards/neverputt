@@ -296,6 +296,7 @@ int hole_goto(int h, int p)
 
             for (i = 1; i <= party; i++)
             {
+                game_ball(i);
                 game_get_pos(ball_p[i], ball_e[i]);
                 stat_v[i] = 0;
             }

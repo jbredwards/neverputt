@@ -402,6 +402,7 @@ void common_draw_balls(struct s_rend *rend, float *bill_M, float t, struct v_bal
 
         glColor4f(color[0], color[1], color[2], color[3]);
         ball_draw(rend, ball_M, pend_M, bill_M, t);
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
     }
     glPopMatrix();
 }
