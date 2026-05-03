@@ -238,7 +238,7 @@ static int title_enter(struct state *st, struct state *prev, int intent)
 
                 if ((kd = gui_varray(jd)))
                 {
-                    gui_start(kd, gt_prefix("menu^Play"),    GUI_MED, TITLE_PLAY, 1);
+                    gui_set_hilite(gui_start(kd, gt_prefix("menu^Play"), GUI_MED, TITLE_PLAY, 1), 1);
                     gui_state(kd, gt_prefix("menu^Options"), GUI_MED, TITLE_CONF, 0);
                     gui_state(kd, gt_prefix("menu^Exit"),    GUI_MED, TITLE_EXIT, 0);
                     gui_set_slide(kd, GUI_N | GUI_EASE_ELASTIC, 0.8f, 1.0f, 0.05f);
