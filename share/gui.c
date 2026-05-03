@@ -50,7 +50,7 @@ const GLubyte gui_wht2[4] = { 0xFF, 0xFF, 0xFF, 0x60 };  /* Transparent white */
 
 /*---------------------------------------------------------------------------*/
 
-#define WIDGET_MAX 256
+#define WIDGET_MAX 1024
 
 #define GUI_FREE   0
 #define GUI_HARRAY 1
