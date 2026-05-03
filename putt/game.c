@@ -171,13 +171,7 @@ static void game_draw_balls(struct s_rend *rend,
                             struct s_vary *fp,
                             float *bill_M, int d, float t)
 {
-    static GLfloat color[5][4] = {
-        { 1.0f, 1.0f, 1.0f, 0.7f },
-        { 1.0f, 0.0f, 0.0f, 1.0f },
-        { 0.0f, 1.0f, 0.0f, 1.0f },
-        { 0.0f, 0.0f, 1.0f, 1.0f },
-        { 1.0f, 1.0f, 0.0f, 1.0f },
-    };
+    GLfloat *color;
 
     int ui;
     struct v_ball ui_ball;
@@ -187,10 +181,11 @@ static void game_draw_balls(struct s_rend *rend,
     for (ui = curr_party(); ui > 0; ui--)
     {
         ui_ball = files[ui].draw.vary->uv[ui];
+        color = ball_color_f(ui);
         
         if (ui == ball)
         {
-            common_draw_balls(rend, bill_M, t, ui_ball, color[ui]);
+            common_draw_balls(rend, bill_M, t, ui_ball, color);
 
             /* Draw the aim polygon for the current player. */
 
@@ -208,9 +203,9 @@ static void game_draw_balls(struct s_rend *rend,
                          ui_ball.r,
                          ui_ball.r);
 
-                glColor4f(color[ui][0],
-                          color[ui][1],
-                          color[ui][2], 0.5f);
+                glColor4f(color[0],
+                          color[1],
+                          color[2], 0.5f);
 
                 mark_draw(rend);
             }

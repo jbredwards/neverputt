@@ -202,43 +202,6 @@ char *hole_tot(int p)
     return NULL;
 }
 
-char *hole_out(int p)
-{
-    static char str[MAXSTR];
-
-    int h, T = 0;
-
-    if (p <= party)
-    {
-        for (h = 1; h <= hole && h <= count / 2; h++)
-            T += score_v[h][p];
-
-        sprintf(str, "%d", T);
-
-        return str;
-    }
-    return NULL;
-}
-
-char *hole_in(int p)
-{
-    static char str[MAXSTR];
-
-    int h, T = 0;
-    int out = count / 2;
-
-    if (hole > out && p <= party)
-    {
-        for (h = out + 1; h <= hole && h < count; h++)
-            T += score_v[h][p];
-
-        sprintf(str, "%d", T);
-
-        return str;
-    }
-    return NULL;
-}
-
 /*---------------------------------------------------------------------------*/
 
 int curr_hole(void)   { return hole;   }
@@ -335,7 +298,7 @@ int hole_move(void)
         game_free();
         back_free();
 
-        if (hole_goto(hole, party))
+        if (hole_goto(-1, -1))
             return 1;
     }
     return 0;
@@ -408,4 +371,32 @@ void hole_fall(void)
 void hole_song(void)
 {
     audio_music_fade_to(0.5f, hole_v[hole].song);
+}
+
+/*---------------------------------------------------------------------------*/
+
+static GLubyte ball_colors_b[MAXPLY][4] = {
+    { 0xFF, 0xFF, 0xFF, 0xFF },
+    { 0xFF, 0x00, 0x00, 0xFF },
+    { 0x00, 0xFF, 0x00, 0xFF },
+    { 0x00, 0x00, 0xFF, 0xFF },
+    { 0xFF, 0xFF, 0x00, 0xFF }
+};
+
+GLubyte *ball_color_b(int p)
+{
+    return ball_colors_b[CLAMP(0, p, party)];
+}
+
+GLfloat *ball_color_f(int p)
+{
+    const GLubyte *colors_b = ball_color_b(p);
+    static GLfloat colors_f[4];
+
+    colors_f[0] = colors_b[0] / 255.f;
+    colors_f[1] = colors_b[1] / 255.f;
+    colors_f[2] = colors_b[2] / 255.f;
+    colors_f[3] = colors_b[3] / 255.f;
+
+    return colors_f;
 }

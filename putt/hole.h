@@ -1,6 +1,8 @@
 #ifndef HOLE_H
 #define HOLE_H
 
+#include "glext.h"
+
 /*---------------------------------------------------------------------------*/
 
 #define MAXHOL 28
@@ -14,8 +16,6 @@ int   hole_load(int, const char *);
 char *hole_player(int);
 char *hole_score(int, int);
 char *hole_tot(int);
-char *hole_out(int);
-char *hole_in(int);
 
 int  curr_hole(void);
 int  curr_party(void);
@@ -34,6 +34,9 @@ void hole_stop(void);
 void hole_fall(void);
 
 void hole_song(void);
+
+GLubyte *ball_color_b(int);
+GLfloat *ball_color_f(int);
 
 /*---------------------------------------------------------------------------*/
 
