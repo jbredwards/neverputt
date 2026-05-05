@@ -101,6 +101,12 @@ static int score_card(const char  *title,
     return id;
 }
 
+static void center_clr_grab()
+{
+    video_set_grab(1);
+    video_clr_grab();
+}
+
 /*---------------------------------------------------------------------------*/
 
 static int shared_stick_basic(int id, int a, float v, int bump)
@@ -782,7 +788,7 @@ static int poser_buttn(int b, int d)
 
 static int flyby_enter(struct state *st, struct state *prev, int intent)
 {
-    video_hide_cursor();
+    video_set_grab(1);
 
     if (paused)
         paused = 0;
@@ -794,7 +800,7 @@ static int flyby_enter(struct state *st, struct state *prev, int intent)
 
 static int flyby_leave(struct state *st, struct state *next, int id, int intent)
 {
-    video_show_cursor();
+    center_clr_grab();
     hud_free();
     return 0;
 }
@@ -866,7 +872,7 @@ static int stroke_enter(struct state *st, struct state *prev, int intent)
 static int stroke_leave(struct state *st, struct state *next, int id, int intent)
 {
     hud_free();
-    video_clr_grab();
+    center_clr_grab();
     config_set_d(CONFIG_CAMERA, 0);
     stroke_rotate = 0.0f;
     stroke_mag = 0.0f;
@@ -956,7 +962,7 @@ static void stroke_wheel(int x, int y)
 
 static int roll_enter(struct state *st, struct state *prev, int intent)
 {
-    video_hide_cursor();
+    video_set_grab(1);
     hud_init();
 
     if (paused)
@@ -969,7 +975,7 @@ static int roll_enter(struct state *st, struct state *prev, int intent)
 
 static int roll_leave(struct state *st, struct state *next, int id, int intent)
 {
-    video_show_cursor();
+    center_clr_grab();
     hud_free();
     return 0;
 }
