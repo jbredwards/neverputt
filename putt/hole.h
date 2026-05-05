@@ -22,6 +22,7 @@ int  curr_party(void);
 int  curr_player(void);
 int  curr_stroke(void);
 int  curr_count(void);
+int  curr_stat(int);
 
 const char *curr_scr(void);
 const char *curr_par(void);
@@ -33,10 +34,11 @@ void hole_goal(void);
 void hole_stop(void);
 void hole_fall(void);
 
+void hole_aud(void);
 void hole_song(void);
 
-GLubyte *ball_color_b(int);
-GLfloat *ball_color_f(int);
+GLubyte *player_color(int);
+GLfloat *ball_color(int);
 
 /*---------------------------------------------------------------------------*/
 

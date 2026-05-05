@@ -148,12 +148,12 @@ static void game_clip_ball(float *view_p, int d, const float *p)
 }
 
 static void game_draw_fore(struct s_rend *rend,
-                           struct s_draw *draw, int ball, float *view_p,
+                           struct s_draw *draw, float *view_p,
                            int pose, float *M,
                            int d, float t,
                            struct renderer *instance)
 {
-    const float *ball_p = draw->vary->uv[ball].p;
+    const float *ball_p = draw->vary->uv[0].p;
 
     glPushMatrix();
     {
@@ -214,7 +214,7 @@ static void game_draw_fore(struct s_rend *rend,
             /* Draw the billboards, entity beams, and coin particles. */
 
             sol_bill(draw, rend, M, t);
-            instance->draw_beams(rend, draw->base, draw->vary);
+            instance->draw_beams(rend, draw->vary);
             part_draw_coin(draw, rend, M, t);
 
             /* Draw the entity particles using only the sparkle light. */
@@ -223,8 +223,8 @@ static void game_draw_fore(struct s_rend *rend,
             glDisable(GL_LIGHT1);
             glEnable (GL_LIGHT2);
             {
-                if (instance->draw_goals) instance->draw_goals(rend, draw->base, t);
-                if (instance->draw_jumps) instance->draw_jumps(rend, draw->base, t);
+                if (instance->draw_goals) instance->draw_goals(rend, draw->vary, t);
+                if (instance->draw_jumps) instance->draw_jumps(rend, draw->vary, t);
             }
             glDisable(GL_LIGHT2);
             glEnable (GL_LIGHT1);
@@ -273,14 +273,13 @@ static void game_shadow_conf(int pose, int enable)
     }
 }
 
-void common_draw(int pose, float t, float fov,
-                 int ball, struct s_draw *draw,
+void common_draw(int pose, float t, float fov, struct s_draw *draw,
                  float view_c[3], float view_p[3], float view_e[3][3],
                  struct renderer *instance)
 {
     struct s_rend rend;
 
-    draw->shadow_ui = ball;
+    draw->shadow_ui = 0;
 
     game_shadow_conf(pose, 1);
     r_draw_enable(&rend);
@@ -343,7 +342,7 @@ void common_draw(int pose, float t, float fov,
                     game_draw_light(-1, t);
 
                     instance->draw_back(&rend, pose, -1, t);
-                    game_draw_fore(&rend, draw, ball, view_p, pose, U, -1, t, instance);
+                    game_draw_fore(&rend, draw, view_p, pose, U, -1, t, instance);
                 }
                 glPopMatrix();
                 glFrontFace(GL_CCW);
@@ -374,7 +373,7 @@ void common_draw(int pose, float t, float fov,
         /* Draw the mirrors and the rest of the foreground. */
 
         game_refl_all (&rend, draw, instance);
-        game_draw_fore(&rend, draw, ball, view_p, pose, T, +1, t, instance);
+        game_draw_fore(&rend, draw, view_p, pose, T, +1, t, instance);
     }
     glPopMatrix();
     video_pop_matrix();
@@ -407,8 +406,8 @@ void common_draw_balls(struct s_rend *rend, float *bill_M, float t, struct v_bal
     glPopMatrix();
 }
 
-void common_draw_beams(struct s_rend *rend, struct s_base *base, struct s_vary *vary,
-                       int jump_e, int goal_e, int goal_k, GLfloat *goal_c)
+void common_draw_beams(struct s_rend *rend, struct s_vary *vary, int jump_e,
+                       int goal_e, GLfloat goal_k, GLfloat *(*goal_c)(struct b_goal *))
 {
     static const GLfloat jump_c[2][4]    =  {{ 0.7f, 0.5f, 1.0f, 0.5f },
                                              { 0.7f, 0.5f, 1.0f, 0.8f }};
@@ -417,6 +416,7 @@ void common_draw_beams(struct s_rend *rend, struct s_base *base, struct s_vary *
                                             {{ 0.0f, 1.0f, 0.0f, 0.5f },
                                              { 0.0f, 1.0f, 0.0f, 0.8f }}};
 
+    const struct s_base *base = vary->base;
     float beam_p[3], beam_e[4], u[3], a;
     int i;
 
@@ -434,7 +434,7 @@ void common_draw_beams(struct s_rend *rend, struct s_base *base, struct s_vary *
             {
                 glTranslatef(beam_p[0], beam_p[1], beam_p[2]);
                 glRotatef(V_DEG(a), u[0], u[1], u[2]);
-                beam_draw(rend, base->zv[i].p, goal_c, base->zv[i].r, goal_k * 3.0f);
+                beam_draw(rend, base->zv[i].p, goal_c(base->zv + i), base->zv[i].r, goal_k * 3.0f);
             }
             glPopMatrix();
         }
@@ -475,4 +475,66 @@ void common_draw_beams(struct s_rend *rend, struct s_base *base, struct s_vary *
             }
             glPopMatrix();
         }
+}
+
+void common_draw_goals(struct s_rend *rend, struct s_vary *vary, float t,
+                       int e, GLfloat goal_k, GLfloat *(*goal_c)(struct b_goal *))
+{
+    const struct s_base *base = vary->base;
+
+    float goal_p[3], goal_e[4], u[3], a;
+    int i;
+
+    if (e)
+    {
+        if (goal_c) r_color_mtrl(rend, 1);
+        for (i = 0; i < base->zc; i++)
+        {
+            sol_entity_p(goal_p, vary, vary->zv[i].mi, vary->zv[i].mj);
+            sol_entity_e(goal_e, vary, vary->zv[i].mi, vary->zv[i].mj);
+
+            q_as_axisangle(goal_e, u, &a);
+
+            glPushMatrix();
+            {
+                glTranslatef(goal_p[0], goal_p[1], goal_p[2]);
+                glRotatef(V_DEG(a), u[0], u[1], u[2]);
+
+                if (goal_c) 
+                {
+                    GLfloat *c = goal_c(base->zv + i);
+                    glColor4f(c[0], c[1], c[2], c[3]);
+                }
+
+                goal_draw(rend, base->zv[i].p, base->zv[i].r, goal_k, t);
+                if (goal_c) glColor4f(1.f, 1.f, 1.f, 1.f);
+            }
+            glPopMatrix();
+        }
+        if (goal_c) r_color_mtrl(rend, 0);
+    }
+}
+
+void common_draw_jumps(struct s_rend *rend, struct s_vary *vary, float t)
+{
+    const struct s_base *base = vary->base;
+
+    float jump_p[3], jump_e[4], u[3], a;
+    int i;
+
+    for (i = 0; i < base->jc; i++)
+    {
+        sol_entity_p(jump_p, vary, vary->jv[i].mi, vary->jv[i].mj);
+        sol_entity_e(jump_e, vary, vary->jv[i].mi, vary->jv[i].mj);
+
+        q_as_axisangle(jump_e, u, &a);
+
+        glPushMatrix();
+        {
+            glTranslatef(jump_p[0], jump_p[1], jump_p[2]);
+            glRotatef(V_DEG(a), u[0], u[1], u[2]);
+            jump_draw(rend, base->jv[i].p, base->jv[i].r, 1.0f);
+        }
+        glPopMatrix();
+    }
 }

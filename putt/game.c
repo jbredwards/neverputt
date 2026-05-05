@@ -36,9 +36,9 @@
 /*---------------------------------------------------------------------------*/
 
 static struct s_full files[MAXPLY];
-
 static struct s_full file;
-static int           ball;
+
+static struct b_goal *scored[MAXPLY];
 
 static int state;
 
@@ -102,15 +102,28 @@ int game_init(const char *s)
 
     for (ui = 0; ui < MAXPLY; ui++)
     {
+        
+    /* 
+     * Don't allocate unneeded memory, but still initialize all references.
+     * This fixes a segfault when not playing with max players.
+     */
+    if (ui > curr_party())
+    {
+        files[ui] = files[0];
+        continue;
+    }
+
+    /* Load a level instance for each player. */
     if (!(state = sol_load_full(&files[ui], s, config_get_d(CONFIG_SHADOW))))
         return 0;
 
     sol_init_sim(&files[ui].vary);
-
-    for (i = 0; i < files[ui].base.dc; i++)
+    file = files[ui];
+    
+    for (i = 0; i < file.base.dc; i++)
     {
-        const char *k = files[ui].base.av + files[ui].base.dv[i].ai;
-        const char *v = files[ui].base.av + files[ui].base.dv[i].aj;
+        const char *k = file.base.av + file.base.dv[i].ai;
+        const char *v = file.base.av + file.base.dv[i].aj;
 
         if (strcmp(k, "idle") == 0)
         {
@@ -120,7 +133,7 @@ int game_init(const char *s)
                 idle_t = 1.0f;
         }
     }
-    } 
+    }
     
     return 1;
 }
@@ -128,10 +141,40 @@ int game_init(const char *s)
 void game_free(void)
 {
     sol_quit_sim();
-    for (int ui = 0; ui < MAXPLY; ui++) sol_free_full(&files[ui]);
+    for (int ui = curr_party(); ui >= 0; ui--) sol_free_full(&files[ui]);
+
+    state = 0;
 }
 
 /*---------------------------------------------------------------------------*/
+
+static GLfloat *goal_color(struct b_goal *goal)
+{
+    static GLfloat goal_c[4] = {1.f, 1.f, 1.f, 1.f};
+    GLfloat *ball_colors;
+    
+    int ui, i;
+    float tot = 0;
+
+    for (ui = curr_party(); ui > 0; ui--)
+        if (curr_stat(ui) && scored[ui] == goal) tot++;
+
+    /* Blend ball colors. */
+
+    goal_c[0] = tot ? 0.f : 1.f;
+    goal_c[1] = tot ? 0.f : 1.f;
+    goal_c[2] = tot ? 0.f : 1.f;
+
+    for (ui = curr_party(); ui > 0; ui--)
+        if (curr_stat(ui) && scored[ui] == goal)
+        {
+            ball_colors = ball_color(ui);
+            for (i = 0; i < 3; i++)
+                goal_c[i] += ball_colors[i] / tot;
+        }
+
+    return goal_c;
+}
 
 static void game_draw_back(struct s_rend *rend, int pose, int d, float t)
 {
@@ -180,10 +223,13 @@ static void game_draw_balls(struct s_rend *rend,
 
     for (ui = curr_party(); ui > 0; ui--)
     {
-        ui_ball = files[ui].draw.vary->uv[ui];
-        color = ball_color_f(ui);
+        if (curr_stat(ui))
+            continue;
+
+        ui_ball = files[ui].draw.vary->uv[0];
+        color = ball_color(ui);
         
-        if (ui == ball)
+        if (ui == curr_player())
         {
             common_draw_balls(rend, bill_M, t, ui_ball, color);
 
@@ -238,12 +284,15 @@ static void game_draw_flags(struct s_rend *rend, const struct s_base *fp)
     }
 }
 
-static void game_draw_beams(struct s_rend *rend, struct s_base *bp, struct s_vary *vp)
+static void game_draw_beams(struct s_rend *rend, struct s_vary *vary)
 {
-    static GLfloat goal_c[4] = { 1.0f, 1.0f, 0.0f, 0.5f };
+    game_draw_flags(rend, vary->base);
+    common_draw_beams(rend, vary, jump_e, 1, 0.25f, goal_color);
+}
 
-    game_draw_flags(rend, bp);
-    common_draw_beams(rend, bp, vp, jump_e, 0, 0.8f, goal_c);
+static void game_draw_goals(struct s_rend *rend, struct s_vary *vary, float t)
+{
+    common_draw_goals(rend, vary, t, 1, 0.25f, goal_color);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -252,8 +301,8 @@ struct renderer r_instance = {
     game_draw_back,
     game_draw_balls,
     game_draw_beams,
-    NULL,
-    NULL,
+    game_draw_goals,
+    common_draw_jumps,
     NULL
 };
 
@@ -273,7 +322,7 @@ void game_draw(int pose, float t)
     if (hmd_stat())
         c[1] += view_dy;
 
-    common_draw(pose, t, fov, ball, &file.draw, c, view_p, view_e, &r_instance);
+    common_draw(pose, t, fov, &file.draw, c, view_p, view_e, &r_instance);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -294,8 +343,8 @@ void game_update_view(float dt)
 
     /* Center the view about the ball. */
 
-    v_cpy(view_c, file.vary.uv[ball].p);
-    v_inv(view_v, file.vary.uv[ball].v);
+    v_cpy(view_c, file.vary.uv[0].p);
+    v_inv(view_v, file.vary.uv[0].v);
 
     switch (config_get_d(CONFIG_CAMERA))
     {
@@ -362,12 +411,12 @@ static int game_update_state(float dt)
 
     /* Test for a switch. */
 
-    if (sol_swch_test(fp, NULL, ball) == SWCH_INSIDE)
+    if (sol_swch_test(fp, NULL, 0) == SWCH_INSIDE)
         audio_play(AUD_SWITCH, 1.f);
 
     /* Test for a jump. */
 
-    if (jump_e == 1 && jump_b == 0 && (sol_jump_test(fp, jump_p, ball) ==
+    if (jump_e == 1 && jump_b == 0 && (sol_jump_test(fp, jump_p, 0) ==
                                        JUMP_INSIDE))
     {
         jump_b  = 1;
@@ -376,7 +425,7 @@ static int game_update_state(float dt)
 
         audio_play(AUD_JUMP, 1.f);
     }
-    if (jump_e == 0 && jump_b == 0 && (sol_jump_test(fp, jump_p, ball) ==
+    if (jump_e == 0 && jump_b == 0 && (sol_jump_test(fp, jump_p, 0) ==
                                        JUMP_OUTSIDE))
     {
         jump_e = 1;
@@ -384,12 +433,12 @@ static int game_update_state(float dt)
 
     /* Test for fall-out. */
 
-    if (file.base.vc == 0 || fp->uv[ball].p[1] < file.base.vv[0].p[1])
+    if (file.base.vc == 0 || fp->uv[0].p[1] < file.base.vv[0].p[1])
         return GAME_FALL;
 
     /* Test for a goal or stop. */
 
-    if (t > 1.f && sol_goal_test(fp, p, ball))
+    if (t > 1.f && (scored[curr_player()] = sol_goal_test(fp, p, 0)))
     {
         t = 0.f;
         return GAME_GOAL;
@@ -421,6 +470,9 @@ static int game_update_state(float dt)
 
 int game_step(const float g[3], float dt)
 {
+    if (!state)
+        return GAME_NONE;
+
     struct s_vary *fp = &file.vary;
 
     static float s = 0.f;
@@ -430,9 +482,6 @@ int game_step(const float g[3], float dt)
     float b = 0.f;
     float st = 0.f;
     int i, n = 1, m = 0;
-
-    if (!state)
-        return GAME_NONE;
 
     s = (7.f * s + dt) / 8.f;
     t = s;
@@ -445,9 +494,9 @@ int game_step(const float g[3], float dt)
 
         if (0.5f < jump_dt)
         {
-            fp->uv[ball].p[0] = jump_p[0];
-            fp->uv[ball].p[1] = jump_p[1];
-            fp->uv[ball].p[2] = jump_p[2];
+            fp->uv[0].p[0] = jump_p[0];
+            fp->uv[0].p[1] = jump_p[1];
+            fp->uv[0].p[2] = jump_p[2];
         }
         if (1.f < jump_dt)
             jump_b = 0;
@@ -464,7 +513,7 @@ int game_step(const float g[3], float dt)
 
         for (i = 0; i < n; i++)
         {
-            d = sol_step(fp, NULL, g, t, ball, &m);
+            d = sol_step(fp, NULL, g, t, 0, &m);
 
             if (b < d)
                 b = d;
@@ -490,9 +539,9 @@ void game_putt(void)
      * friction too early and stopping the ball prematurely.
      */
 
-    file.vary.uv[ball].v[0] = -4.f * view_e[2][0] * view_m;
-    file.vary.uv[ball].v[1] = -4.f * view_e[2][1] * view_m + BALL_FUDGE;
-    file.vary.uv[ball].v[2] = -4.f * view_e[2][2] * view_m;
+    file.vary.uv[0].v[0] = -4.f * view_e[2][0] * view_m;
+    file.vary.uv[0].v[1] = -4.f * view_e[2][1] * view_m + BALL_FUDGE;
+    file.vary.uv[0].v[2] = -4.f * view_e[2][2] * view_m;
 
     view_m = 0.f;
 }
@@ -519,6 +568,9 @@ void game_set_mag(int d)
 
 void game_set_fly(float k)
 {
+    if (!state)
+        return;
+
     struct s_vary *fp = &file.vary;
 
     float  x[3] = { 1.f, 0.f, 0.f };
@@ -530,14 +582,11 @@ void game_set_fly(float k)
     float p1[3] = { 0.f, 0.f, 0.f };
     float  v[3];
 
-    if (!state)
-        return;
-
     v_cpy(view_e[0], x);
     v_cpy(view_e[1], y);
 
     if (fp->base->zc > 0)
-        v_sub(view_e[2], fp->uv[ball].p, fp->base->zv[0].p);
+        v_sub(view_e[2], fp->uv[0].p, fp->base->zv[0].p);
     else
         v_cpy(view_e[2], z);
 
@@ -554,8 +603,8 @@ void game_set_fly(float k)
 
     if (fp->uc > 0)
     {
-        v_cpy(c0, fp->uv[ball].p);
-        v_cpy(p0, fp->uv[ball].p);
+        v_cpy(c0, fp->uv[0].p);
+        v_cpy(p0, fp->uv[0].p);
     }
 
     v_mad(p0, p0, view_e[1], view_dy);
@@ -600,7 +649,7 @@ void game_ball(int i)
 {
     int ui;
 
-    file = files[ball = i];
+    file = files[i];
 
     jump_e = 1;
     jump_b = 0;
@@ -619,18 +668,18 @@ void game_ball(int i)
 
 void game_get_pos(float p[3], float e[3][3])
 {
-    v_cpy(p,    file.vary.uv[ball].p);
-    v_cpy(e[0], file.vary.uv[ball].e[0]);
-    v_cpy(e[1], file.vary.uv[ball].e[1]);
-    v_cpy(e[2], file.vary.uv[ball].e[2]);
+    v_cpy(p,    file.vary.uv[0].p);
+    v_cpy(e[0], file.vary.uv[0].e[0]);
+    v_cpy(e[1], file.vary.uv[0].e[1]);
+    v_cpy(e[2], file.vary.uv[0].e[2]);
 }
 
 void game_set_pos(float p[3], float e[3][3])
 {
-    v_cpy(file.vary.uv[ball].p,    p);
-    v_cpy(file.vary.uv[ball].e[0], e[0]);
-    v_cpy(file.vary.uv[ball].e[1], e[1]);
-    v_cpy(file.vary.uv[ball].e[2], e[2]);
+    v_cpy(file.vary.uv[0].p,    p);
+    v_cpy(file.vary.uv[0].e[0], e[0]);
+    v_cpy(file.vary.uv[0].e[1], e[1]);
+    v_cpy(file.vary.uv[0].e[2], e[2]);
 }
 
 /*---------------------------------------------------------------------------*/

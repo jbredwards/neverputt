@@ -208,6 +208,10 @@ int curr_hole(void)   { return hole;   }
 int curr_party(void)  { return party;  }
 int curr_player(void) { return player; }
 int curr_count(void)  { return count;  }
+int curr_stat(int p)
+{
+    return stat_v[p];
+}
 
 const char *curr_scr(void)
 {
@@ -368,6 +372,28 @@ void hole_fall(void)
 
 /*---------------------------------------------------------------------------*/
 
+void hole_aud(void)
+{
+    if (party < 2)
+        return;
+    
+    switch (player)
+    {
+        case 1:
+            audio_play(AUD_PLAYER1, 1.f);
+            break;
+        case 2:
+            audio_play(AUD_PLAYER2, 1.f);
+            break;
+        case 3:
+            audio_play(AUD_PLAYER3, 1.f);
+            break;
+        case 4:
+            audio_play(AUD_PLAYER4, 1.f);
+            break;
+    }
+}
+
 void hole_song(void)
 {
     audio_music_fade_to(0.5f, hole_v[hole].song);
@@ -375,7 +401,7 @@ void hole_song(void)
 
 /*---------------------------------------------------------------------------*/
 
-static GLubyte ball_colors_b[MAXPLY][4] = {
+static GLubyte player_colors[MAXPLY][4] = {
     { 0xFF, 0xFF, 0xFF, 0xFF },
     { 0xFF, 0x00, 0x00, 0xFF },
     { 0x00, 0xFF, 0x00, 0xFF },
@@ -383,14 +409,14 @@ static GLubyte ball_colors_b[MAXPLY][4] = {
     { 0xFF, 0xFF, 0x00, 0xFF }
 };
 
-GLubyte *ball_color_b(int p)
+GLubyte *player_color(int p)
 {
-    return ball_colors_b[CLAMP(0, p, party)];
+    return player_colors[CLAMP(0, p, MAXPLY - 1)];
 }
 
-GLfloat *ball_color_f(int p)
+GLfloat *ball_color(int p)
 {
-    const GLubyte *colors_b = ball_color_b(p);
+    const GLubyte *colors_b = player_color(p);
     static GLfloat colors_f[4];
 
     colors_f[0] = colors_b[0] / 255.f;

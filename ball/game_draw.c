@@ -28,69 +28,31 @@
 
 /*---------------------------------------------------------------------------*/
 
-static void game_draw_balls(struct s_rend *rend,struct s_vary *vary, float *bill_M, int d, float t)
+static GLfloat *goal_color(struct b_goal *goal)
+{
+    static GLfloat goal_c[4] = { 1.0f, 1.0f, 0.0f, 0.5f };
+    return goal_c;
+}
+
+static void game_draw_balls(struct s_rend *rend, struct s_vary *vary, float *bill_M, int d, float t)
 {
     float c[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
     common_draw_balls(rend, bill_M, t, vary->uv[0], c);
 }
 
-static void game_draw_beams(struct s_rend *rend, struct s_base *base, struct s_vary *vary)
-{
-    static GLfloat goal_c[4] = { 1.0f, 1.0f, 0.0f, 0.5f };
-    const struct game_draw *gd = curr_game_draw();
-
-    common_draw_beams(rend, base, vary, gd->jump_e, gd->goal_e, gd->goal_k, goal_c);
-}
-
-static void game_draw_goals(struct s_rend *rend, struct s_base *base, float t)
+static void game_draw_beams(struct s_rend *rend, struct s_vary *vary)
 {
     const struct game_draw *gd = curr_game_draw();
-    const struct s_vary *vary = &gd->vary;
 
-    float goal_p[3], goal_e[4], u[3], a;
-    int i;
-
-    if (gd->goal_e)
-        for (i = 0; i < base->zc; i++)
-        {
-            sol_entity_p(goal_p, vary, vary->zv[i].mi, vary->zv[i].mj);
-            sol_entity_e(goal_e, vary, vary->zv[i].mi, vary->zv[i].mj);
-
-            q_as_axisangle(goal_e, u, &a);
-
-            glPushMatrix();
-            {
-                glTranslatef(goal_p[0], goal_p[1], goal_p[2]);
-                glRotatef(V_DEG(a), u[0], u[1], u[2]);
-                goal_draw(rend, base->zv[i].p, base->zv[i].r, gd->goal_k, t);
-            }
-            glPopMatrix();
-        }
+    common_draw_beams(rend, vary, gd->jump_e, gd->goal_e, gd->goal_k, goal_color);
 }
 
-static void game_draw_jumps(struct s_rend *rend, struct s_base *base, float t)
+static void game_draw_goals(struct s_rend *rend, struct s_vary *vary, float t)
 {
-    const struct s_vary *vary = &curr_game_draw()->vary;
+    const struct game_draw *gd = curr_game_draw();
 
-    float jump_p[3], jump_e[4], u[3], a;
-    int i;
-
-    for (i = 0; i < base->jc; i++)
-    {
-        sol_entity_p(jump_p, vary, vary->jv[i].mi, vary->jv[i].mj);
-        sol_entity_e(jump_e, vary, vary->jv[i].mi, vary->jv[i].mj);
-
-        q_as_axisangle(jump_e, u, &a);
-
-        glPushMatrix();
-        {
-            glTranslatef(jump_p[0], jump_p[1], jump_p[2]);
-            glRotatef(V_DEG(a), u[0], u[1], u[2]);
-            jump_draw(rend, base->jv[i].p, base->jv[i].r, 1.0f);
-        }
-        glPopMatrix();
-    }
+    common_draw_goals(rend, vary, t, gd->goal_e, gd->goal_k, NULL);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -146,7 +108,7 @@ struct renderer r_instance = {
     game_draw_balls,
     game_draw_beams,
     game_draw_goals,
-    game_draw_jumps,
+    common_draw_jumps,
     game_draw_tilt
 };
 
@@ -156,7 +118,7 @@ void game_draw(struct game_draw *gd, int pose, float t)
 
     if (gd->jump_b) fov *= 2.f * fabsf(gd->jump_dt - 0.5f);
 
-    if (gd->state) common_draw(pose, t, fov, 0, &gd->draw, gd->view.c, gd->view.p, gd->view.e, &r_instance);
+    if (gd->state) common_draw(pose, t, fov, &gd->draw, gd->view.c, gd->view.p, gd->view.e, &r_instance);
 }
 
 /*---------------------------------------------------------------------------*/

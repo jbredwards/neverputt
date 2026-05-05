@@ -31,25 +31,18 @@ static int fps_id;
 
 void hud_init(void)
 {
-    static const GLubyte *color[5] = {
-        gui_wht,
-        gui_red,
-        gui_grn,
-        gui_blu,
-        gui_yel
-    };
     int i = curr_player();
 
     if ((Lhud_id = gui_hstack(0)))
     {
-        gui_label(Lhud_id, curr_scr(), GUI_MED, color[i], gui_wht);
+        gui_label(Lhud_id, curr_scr(), GUI_MED, player_color(i), gui_wht);
         gui_label(Lhud_id, _("Score"), GUI_SML,  gui_wht,  gui_wht);
         gui_set_rect(Lhud_id, GUI_NE);
         gui_layout(Lhud_id, -1, -1);
     }
     if ((Rhud_id = gui_hstack(0)))
     {
-        gui_label(Rhud_id, curr_par(), GUI_MED,  color[i], gui_wht);
+        gui_label(Rhud_id, curr_par(), GUI_MED, player_color(i), gui_wht);
         gui_label(Rhud_id, _("Par"),   GUI_SML, gui_wht,  gui_wht);
         gui_set_rect(Rhud_id, GUI_NW);
         gui_layout(Rhud_id, +1, -1);

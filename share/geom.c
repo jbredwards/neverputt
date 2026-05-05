@@ -494,8 +494,9 @@ void beam_draw(struct s_rend *rend, const GLfloat *p,
 void goal_draw(struct s_rend *rend, const GLfloat *p, GLfloat r, GLfloat h, GLfloat t)
 {
     GLfloat height = (hmd_stat() ? 0.3f : 1.0f) * video.device_h;
+    GLfloat radius = r / 0.75f;
 
-    glPointSize(height / 6);
+    glPointSize(radius * height / 6);
 
     glPushMatrix();
     {
@@ -509,8 +510,9 @@ void goal_draw(struct s_rend *rend, const GLfloat *p, GLfloat r, GLfloat h, GLfl
 void jump_draw(struct s_rend *rend, const GLfloat *p, GLfloat r, GLfloat h)
 {
     GLfloat height = (hmd_stat() ? 0.3f : 1.0f) * video.device_h;
+    GLfloat radius = r / 0.75f;
 
-    glPointSize(height / 12);
+    glPointSize(radius * height / 12);
 
     glPushMatrix();
     {

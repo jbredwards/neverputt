@@ -34,11 +34,11 @@
 
 /*---------------------------------------------------------------------------*/
 
-static char *number(int i)
+static char *number(int i, int format)
 {
     static char str[MAXSTR];
 
-    sprintf(str, "%02d", i);
+    sprintf(str, format ? "%02d" : "%d", i);
 
     return str;
 }
@@ -63,7 +63,7 @@ static int score_card(const char  *title,
             {
                 gui_label(kd, _("Total"), GUI_TNY, 0, 0);
                 for (p = 0; p <= curr_party(); p++)
-                    gui_label(kd, hole_tot(p), GUI_TNY, ball_color_b(p), gui_wht);
+                    gui_label(kd, hole_tot(p), GUI_TNY, player_color(p), gui_wht);
 
                 gui_set_rect(kd, GUI_ALL);
             }
@@ -73,9 +73,9 @@ static int score_card(const char  *title,
                 for (h = n; h > 0; h--)
                     if ((ld = gui_varray(kd)))
                     {
-                        gui_label(ld, number(h), GUI_TNY, 0, 0);
+                        gui_label(ld, number(h, 1), GUI_TNY, 0, 0);
                         for (p = 0; p <= curr_party(); p++)
-                            gui_label(ld, hole_score(h, p), GUI_TNY, ball_color_b(p), gui_wht);
+                            gui_label(ld, hole_score(h, p), GUI_TNY, player_color(p), gui_wht);
                     }
 
                 gui_set_rect(kd, GUI_ALL);
@@ -88,7 +88,7 @@ static int score_card(const char  *title,
                 if ((ld = gui_varray(kd)))
                 {
                     for (p = 0; p <= curr_party(); p++)
-                        gui_label(ld, hole_player(p), GUI_TNY, ball_color_b(p), gui_wht);
+                        gui_label(ld, hole_player(p), GUI_TNY, player_color(p), gui_wht);
 
                     gui_set_rect(ld, GUI_ALL);
                 }
@@ -426,47 +426,29 @@ static int course_buttn(int b, int d)
 /*---------------------------------------------------------------------------*/
 
 #define PARTY_T 0
-#define PARTY_1 1
-#define PARTY_2 2
-#define PARTY_3 3
-#define PARTY_4 4
-#define PARTY_B 5
+#define PARTY_B 1
 
 static int party_action(int i)
 {
     switch (i)
     {
-    case PARTY_1:
-        audio_play(AUD_MENU, 1.f);
-        if (hole_goto(1, 1))
-            goto_state(&st_next);
-        break;
-    case PARTY_2:
-        audio_play(AUD_MENU, 1.f);
-        if (hole_goto(1, 2))
-            goto_state(&st_next);
-        break;
-    case PARTY_3:
-        audio_play(AUD_MENU, 1.f);
-        if (hole_goto(1, 3))
-            goto_state(&st_next);
-        break;
-    case PARTY_4:
-        audio_play(AUD_MENU, 1.f);
-        if (hole_goto(1, 4))
-            goto_state(&st_next);
-        break;
-    case PARTY_B:
-        audio_play(AUD_MENU, 1.f);
-        exit_state(&st_course);
-        break;
+        case PARTY_B:
+            audio_play(AUD_MENU, 1.f);
+            exit_state(&st_course);
+            break;
+        default:
+            audio_play(AUD_MENU, 1.f);
+            if (hole_goto(1, i - 1))
+                goto_state(&st_next);
+            break;
     }
+
     return 1;
 }
 
 static int party_enter(struct state *st, struct state *prev, int intent)
 {
-    int id, jd;
+    int id, jd, p, p1;
 
     if ((id = gui_vstack(0)))
     {
@@ -475,15 +457,11 @@ static int party_enter(struct state *st, struct state *prev, int intent)
 
         if ((jd = gui_harray(id)))
         {
-            int p4 = gui_state(jd, "4", GUI_LRG, PARTY_4, 0);
-            int p3 = gui_state(jd, "3", GUI_LRG, PARTY_3, 0);
-            int p2 = gui_state(jd, "2", GUI_LRG, PARTY_2, 0);
-            int p1 = gui_state(jd, "1", GUI_LRG, PARTY_1, 0);
-
-            gui_set_color(p1, gui_red, gui_wht);
-            gui_set_color(p2, gui_grn, gui_wht);
-            gui_set_color(p3, gui_blu, gui_wht);
-            gui_set_color(p4, gui_yel, gui_wht);
+            for (p = MAXPLY - 1; p > 0; p--)
+            {
+                p1 = gui_state(jd, number(p, 0), GUI_LRG, p + 1, 0);
+                gui_set_color(p1, player_color(p), gui_wht);
+            }
 
             gui_focus(p1);
         }
@@ -689,25 +667,8 @@ static int next_enter(struct state *st, struct state *prev, int intent)
         {
             gui_label(jd, _("Player"), GUI_SML, 0, 0);
 
-            switch (curr_player())
-            {
-            case 1:
-                gui_label(jd, "1", GUI_LRG, gui_red, gui_wht);
-                if (curr_party() > 1) audio_play(AUD_PLAYER1, 1.f);
-                break;
-            case 2:
-                gui_label(jd, "2", GUI_LRG, gui_grn, gui_wht);
-                if (curr_party() > 1) audio_play(AUD_PLAYER2, 1.f);
-                break;
-            case 3:
-                gui_label(jd, "3", GUI_LRG, gui_blu, gui_wht);
-                if (curr_party() > 1) audio_play(AUD_PLAYER3, 1.f);
-                break;
-            case 4:
-                gui_label(jd, "4", GUI_LRG, gui_yel, gui_wht);
-                if (curr_party() > 1) audio_play(AUD_PLAYER4, 1.f);
-                break;
-            }
+            gui_label(jd, number(curr_player(), 0), GUI_LRG, player_color(curr_player()), gui_wht);
+            hole_aud();
 
             gui_set_rect(jd, GUI_ALL);
         }
@@ -936,6 +897,8 @@ static void stroke_timer(int id, float dt)
     game_update_view(dt);
     game_step(g, dt);
 
+    /* Prevent mouse wheel fron continuously adjusting the stroke. */
+    
     if (is_wheel)
     {
         stroke_rotate = 0;
