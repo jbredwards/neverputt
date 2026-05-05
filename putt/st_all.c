@@ -887,6 +887,7 @@ static int flyby_buttn(int b, int d)
 static int stroke_rotate = 0;
 static int stroke_rotate_alt = 0;
 static int stroke_mag = 0;
+static int is_wheel = 0;
 
 static int stroke_enter(struct state *st, struct state *prev, int intent)
 {
@@ -908,6 +909,7 @@ static int stroke_leave(struct state *st, struct state *next, int id, int intent
     config_set_d(CONFIG_CAMERA, 0);
     stroke_rotate = 0.0f;
     stroke_mag = 0.0f;
+    is_wheel = 0;
     return 0;
 }
 
@@ -933,6 +935,13 @@ static void stroke_timer(int id, float dt)
 
     game_update_view(dt);
     game_step(g, dt);
+
+    if (is_wheel)
+    {
+        stroke_rotate = 0;
+        stroke_mag = 0;
+        is_wheel = 0;
+    }
 }
 
 static void stroke_point(int id, int x, int y, int dx, int dy)
@@ -971,6 +980,13 @@ static int stroke_buttn(int b, int d)
             stroke_rotate_alt = 0;
     }
     return 1;
+}
+
+static void stroke_wheel(int x, int y)
+{
+    stroke_rotate = 24 * x;
+    stroke_mag = 24 * y;
+    is_wheel = 1;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -1439,7 +1455,8 @@ struct state st_stroke = {
     NULL,
     stroke_click,
     shared_keybd,
-    stroke_buttn
+    stroke_buttn,
+    stroke_wheel
 };
 
 struct state st_roll = {

@@ -250,6 +250,10 @@ static int loop(void)
         case SDL_JOYDEVICEREMOVED:
             joy_remove(e.jdevice.which);
             break;
+
+        case SDL_MOUSEWHEEL:
+            st_wheel(e.wheel.x, e.wheel.y);
+            break;
         }
     }
     return d;
