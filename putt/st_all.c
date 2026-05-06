@@ -852,12 +852,12 @@ static int flyby_buttn(int b, int d)
 /*---------------------------------------------------------------------------*/
 
 #define STICK_SENSE 6
-#define WHEEL_SENSE 20
+#define WHEEL_SENSE 16
 
 static float stroke_rotate = 0;
 static int stroke_rotate_alt = 0;
 static float stroke_mag = 0;
-static int is_wheel = 0;
+static int is_mouse = 0;
 
 static int stroke_enter(struct state *st, struct state *prev, int intent)
 {
@@ -879,7 +879,7 @@ static int stroke_leave(struct state *st, struct state *next, int id, int intent
     config_set_d(CONFIG_CAMERA, 0);
     stroke_rotate = 0.0f;
     stroke_mag = 0.0f;
-    is_wheel = 0;
+    is_mouse = 0;
     return 0;
 }
 
@@ -906,20 +906,21 @@ static void stroke_timer(int id, float dt)
     game_update_view(dt);
     game_step(g, dt);
 
-    /* Prevent mouse wheel fron continuously adjusting the stroke. */
+    /* Prevent mouse from continuously adjusting the stroke. */
     
-    if (is_wheel)
+    if (is_mouse)
     {
         stroke_rotate = 0;
         stroke_mag = 0;
-        is_wheel = 0;
+        is_mouse = 0;
     }
 }
 
 static void stroke_point(int id, int x, int y, int dx, int dy)
 {
-    game_set_rot(dx);
-    game_set_mag(dy);
+    stroke_rotate = dx;
+    stroke_mag = dy;
+    is_mouse = 1;
 }
 
 static void stroke_stick(int id, int a, float v, int bump)
@@ -958,7 +959,7 @@ static void stroke_wheel(int x, int y)
 {
     stroke_rotate = WHEEL_SENSE * x;
     stroke_mag = WHEEL_SENSE * y;
-    is_wheel = 1;
+    is_mouse = 1;
 }
 
 /*---------------------------------------------------------------------------*/
