@@ -226,6 +226,9 @@ int conf_common_leave(struct state *st, struct state *next, int id, int intent)
 
     back_free();
 
+    if (next == st)
+        return transition_page(id, 0, intent);
+
     return transition_slide(id, 0, intent);
 }
 
@@ -675,12 +678,14 @@ static int lang_gui(void)
             gui_navig(jd, array_len(langs), first, LANG_STEP);
         }
 
-        gui_space(id);
+        if ((jd = gui_vstack(id)))
+        {
+        gui_space(jd);
 
         if (step < LANG_STEP)
         {
             int default_id;
-            default_id = gui_state(id, _("Default"), GUI_SML, LANG_DEFAULT, 0);
+            default_id = gui_state(jd, _("Default"), GUI_SML, LANG_DEFAULT, 0);
             gui_set_hilite(default_id, !*config_get_s(CONFIG_LANGUAGE));
         }
 
@@ -692,7 +697,7 @@ static int lang_gui(void)
 
                 int lang_id;
 
-                lang_id = gui_state(id, " ", GUI_SML, LANG_SELECT, i);
+                lang_id = gui_state(jd, " ", GUI_SML, LANG_SELECT, i);
 
                 gui_set_hilite(lang_id, (strcmp(config_get_s(CONFIG_LANGUAGE),
                                                 desc->code) == 0));
@@ -704,8 +709,9 @@ static int lang_gui(void)
             }
             else
             {
-                gui_label(id, " ", GUI_SML, 0, 0);
+                gui_label(jd, " ", GUI_SML, 0, 0);
             }
+        }
         }
 
         gui_layout(id, 0, 0);
@@ -726,6 +732,9 @@ static int lang_enter(struct state *st, struct state *prev, int intent)
         lang_back = prev;
 
     conf_common_init(lang_action);
+    if (prev == st)
+        return transition_page(lang_gui(), 1, intent);
+
     return transition_slide(lang_gui(), 1, intent);
 }
 
