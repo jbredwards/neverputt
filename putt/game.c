@@ -38,8 +38,7 @@
 static struct s_full files[MAXPLY];
 static struct s_full file;
 
-static struct b_goal *scored[MAXPLY];
-
+static int scored[MAXPLY];
 static int state;
 
 static float view_a;                    /* Ideal view rotation about Y axis  */
@@ -114,7 +113,7 @@ int game_init(const char *s)
     }
 
     /* Load a level instance for each player. */
-    if (!(state = sol_load_full(&files[ui], s, config_get_d(CONFIG_SHADOW))))
+    if (!(state = sol_load_full(files + ui, s, config_get_d(CONFIG_SHADOW))))
         return 0;
 
     sol_init_sim(&files[ui].vary);
@@ -141,14 +140,25 @@ int game_init(const char *s)
 void game_free(void)
 {
     sol_quit_sim();
-    for (int ui = curr_party(); ui >= 0; ui--) sol_free_full(&files[ui]);
+
+    for (int ui = curr_party(); ui >= 0; ui--) sol_free_full(files + ui);
+    for (int ui = MAXPLY - 1; ui >= 0; ui--) scored[ui] = 0;
 
     state = 0;
 }
 
 /*---------------------------------------------------------------------------*/
 
-static GLfloat *goal_color(struct b_goal *goal)
+static int save_goal_id(struct b_goal *goal)
+{
+    if (!goal)
+        return 0;
+
+    scored[curr_player()] = file.base.zv - goal;
+    return 1;
+}
+
+static GLfloat *goal_color(int goal_id)
 {
     static GLfloat goal_c[4] = {1.f, 1.f, 1.f, 1.f};
     GLfloat *ball_colors;
@@ -157,7 +167,7 @@ static GLfloat *goal_color(struct b_goal *goal)
     float tot = 0;
 
     for (ui = curr_party(); ui > 0; ui--)
-        if (curr_stat(ui) && scored[ui] == goal) tot++;
+        if (curr_stat(ui) && scored[ui] == goal_id) tot++;
 
     /* Blend ball colors. */
 
@@ -166,7 +176,7 @@ static GLfloat *goal_color(struct b_goal *goal)
     goal_c[2] = tot ? 0.f : 1.f;
 
     for (ui = curr_party(); ui > 0; ui--)
-        if (curr_stat(ui) && scored[ui] == goal)
+        if (curr_stat(ui) && scored[ui] == goal_id)
         {
             ball_colors = ball_color(ui);
             for (i = 0; i < 3; i++)
@@ -438,7 +448,7 @@ static int game_update_state(float dt)
 
     /* Test for a goal or stop. */
 
-    if (t > 1.f && (scored[curr_player()] = sol_goal_test(fp, p, 0)))
+    if (t > 1.f && save_goal_id(sol_goal_test(fp, p, 0)))
     {
         t = 0.f;
         return GAME_GOAL;

@@ -28,7 +28,7 @@
 
 /*---------------------------------------------------------------------------*/
 
-static GLfloat *goal_color(struct b_goal *goal)
+static GLfloat *goal_color(int goal_id)
 {
     static GLfloat goal_c[4] = { 1.0f, 1.0f, 0.0f, 0.5f };
     return goal_c;

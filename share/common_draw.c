@@ -407,7 +407,7 @@ void common_draw_balls(struct s_rend *rend, float *bill_M, float t, struct v_bal
 }
 
 void common_draw_beams(struct s_rend *rend, struct s_vary *vary, int jump_e,
-                       int goal_e, GLfloat goal_k, GLfloat *(*goal_c)(struct b_goal *))
+                       int goal_e, GLfloat goal_k, GLfloat *(*goal_c)(int))
 {
     static const GLfloat jump_c[2][4]    =  {{ 0.7f, 0.5f, 1.0f, 0.5f },
                                              { 0.7f, 0.5f, 1.0f, 0.8f }};
@@ -434,7 +434,7 @@ void common_draw_beams(struct s_rend *rend, struct s_vary *vary, int jump_e,
             {
                 glTranslatef(beam_p[0], beam_p[1], beam_p[2]);
                 glRotatef(V_DEG(a), u[0], u[1], u[2]);
-                beam_draw(rend, base->zv[i].p, goal_c(base->zv + i), base->zv[i].r, goal_k * 3.0f);
+                beam_draw(rend, base->zv[i].p, goal_c(i), base->zv[i].r, goal_k * 3.0f);
             }
             glPopMatrix();
         }
@@ -478,7 +478,7 @@ void common_draw_beams(struct s_rend *rend, struct s_vary *vary, int jump_e,
 }
 
 void common_draw_goals(struct s_rend *rend, struct s_vary *vary, float t,
-                       int e, GLfloat goal_k, GLfloat *(*goal_c)(struct b_goal *))
+                       int e, GLfloat goal_k, GLfloat *(*goal_c)(int))
 {
     const struct s_base *base = vary->base;
 
@@ -502,7 +502,7 @@ void common_draw_goals(struct s_rend *rend, struct s_vary *vary, float t,
 
                 if (goal_c) 
                 {
-                    GLfloat *c = goal_c(base->zv + i);
+                    GLfloat *c = goal_c(i);
                     glColor4f(c[0], c[1], c[2], c[3]);
                 }
 

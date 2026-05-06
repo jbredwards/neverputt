@@ -28,8 +28,8 @@ struct renderer
 
 void common_draw(int, float, float, struct s_draw *, float [3], float [3], float [3][3], struct renderer *);
 void common_draw_balls(struct s_rend *, float *, float, struct v_ball, GLfloat *);
-void common_draw_beams(struct s_rend *, struct s_vary *, int, int, GLfloat, GLfloat *(*)(struct b_goal *));
-void common_draw_goals(struct s_rend *, struct s_vary *, float, int, GLfloat, GLfloat *(*)(struct b_goal *));
+void common_draw_beams(struct s_rend *, struct s_vary *, int, int, GLfloat, GLfloat *(*)(int));
+void common_draw_goals(struct s_rend *, struct s_vary *, float, int, GLfloat, GLfloat *(*)(int));
 void common_draw_jumps(struct s_rend *, struct s_vary *, float);
 
 /*---------------------------------------------------------------------------*/
