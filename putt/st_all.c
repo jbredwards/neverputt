@@ -851,9 +851,12 @@ static int flyby_buttn(int b, int d)
 
 /*---------------------------------------------------------------------------*/
 
-static int stroke_rotate = 0;
+#define STICK_SENSE 6
+#define WHEEL_SENSE 20
+
+static float stroke_rotate = 0;
 static int stroke_rotate_alt = 0;
-static int stroke_mag = 0;
+static float stroke_mag = 0;
 static int is_wheel = 0;
 
 static int stroke_enter(struct state *st, struct state *prev, int intent)
@@ -922,9 +925,9 @@ static void stroke_point(int id, int x, int y, int dx, int dy)
 static void stroke_stick(int id, int a, float v, int bump)
 {
     if      (config_tst_d(CONFIG_JOYSTICK_AXIS_X0, a))
-        stroke_rotate = 6 * v;
+        stroke_rotate = STICK_SENSE * v * 60.f / video_perf();
     else if (config_tst_d(CONFIG_JOYSTICK_AXIS_Y0, a))
-        stroke_mag = -6 * v;
+        stroke_mag = -STICK_SENSE * v * 60.f / video_perf();
 }
 
 static int stroke_click(int b, int d)
@@ -953,8 +956,8 @@ static int stroke_buttn(int b, int d)
 
 static void stroke_wheel(int x, int y)
 {
-    stroke_rotate = 24 * x;
-    stroke_mag = 24 * y;
+    stroke_rotate = WHEEL_SENSE * x;
+    stroke_mag = WHEEL_SENSE * y;
     is_wheel = 1;
 }
 

@@ -558,7 +558,7 @@ void game_putt(void)
 
 /*---------------------------------------------------------------------------*/
 
-void game_set_rot(int d)
+void game_set_rot(float d)
 {
     view_a += (float) (30.f * d) / config_get_d(CONFIG_MOUSE_SENSE);
 }
@@ -568,7 +568,7 @@ void game_clr_mag(void)
     view_m = 1.f;
 }
 
-void game_set_mag(int d)
+void game_set_mag(float d)
 {
     view_m -= (float) (1.f * d) / config_get_d(CONFIG_MOUSE_SENSE);
 
