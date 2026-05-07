@@ -43,6 +43,7 @@ static int party;
 static int player;
 static int count;
 static int done;
+static int aud;
 
 static int         stat_v[MAXPLY];
 static float       ball_p[MAXPLY][3];
@@ -61,6 +62,7 @@ static void hole_init_rc(const char *filename)
     player = 0;
     count  = 0;
     done   = 0;
+    aud    = 0;
 
     /* Load the holes list. */
 
@@ -259,7 +261,6 @@ int hole_goto(int h, int p)
             /* Initialize players. */
 
             player = (hole - 1) % party + 1;
-            done   = 0;
 
             for (i = 1; i <= party; i++)
             {
@@ -268,6 +269,12 @@ int hole_goto(int h, int p)
                 stat_v[i] = 0;
             }
             game_ball(player);
+
+            /* Initialize hole. */
+
+            aud = party == 1 ? player : 0;
+            done = 0;
+
             hole_song();
             return 1;
         }
@@ -374,7 +381,7 @@ void hole_fall(void)
 
 void hole_aud(void)
 {
-    if (party < 2)
+    if (aud == player)
         return;
     
     switch (player)
@@ -392,6 +399,8 @@ void hole_aud(void)
             audio_play(AUD_PLAYER4, 1.f);
             break;
     }
+
+    aud = player;
 }
 
 void hole_song(void)
