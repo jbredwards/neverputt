@@ -1030,7 +1030,7 @@ static int goal_enter(struct state *st, struct state *prev, int intent)
 {
     int id;
 
-    if ((id = gui_label(0, _("It's In!"), GUI_MED, gui_grn, gui_grn)))
+    if ((id = gui_label(0, _("It's In!"), GUI_MED, player_color(curr_player()), gui_wht)))
         gui_layout(id, 0, 0);
 
     if (paused)
