@@ -306,6 +306,7 @@ static void game_draw_balls(struct s_rend *rend,
                             float *bill_M, int d, float t)
 {
     GLfloat *color;
+    float dif[3];
 
     int ui;
     struct v_ball ui_ball;
@@ -347,6 +348,12 @@ static void game_draw_balls(struct s_rend *rend,
                 mark_draw(rend);
             }
             glPopMatrix();
+            
+            /* Draw other players as visble or invisible based on distance. */
+
+            v_sub(dif, ui_ball.p, file.draw.vary->uv->p);
+            if ((color[3] = CLAMP(0, (v_len(dif) - ui_ball.r) / 2, 0.5f)))
+                common_draw_balls(rend, bill_M, t, ui_ball, color);
         }
     }
 
