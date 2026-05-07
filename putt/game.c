@@ -118,6 +118,15 @@ int game_init(const char *s)
 
     sol_init_sim(&files[ui].vary);
     file = files[ui];
+
+    /* Apply starting position for each player. */
+    if (ui)
+    {
+        v_cpy(file.vary.uv[0].p,    file.vary.uv[(ui - 1) % 4 + 1].p);
+        v_cpy(file.vary.uv[0].e[0], file.vary.uv[(ui - 1) % 4 + 1].e[0]);
+        v_cpy(file.vary.uv[0].e[1], file.vary.uv[(ui - 1) % 4 + 1].e[1]);
+        v_cpy(file.vary.uv[0].e[2], file.vary.uv[(ui - 1) % 4 + 1].e[2]);
+    }
     
     for (i = 0; i < file.base.dc; i++)
     {
