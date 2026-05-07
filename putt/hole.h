@@ -8,6 +8,13 @@
 #define MAXHOL 28
 #define MAXPLY 9
 
+enum
+{
+    STAT_NONE = 0,
+    STAT_SCORED,
+    STAT_OUT
+};
+
 void  hole_init(const char *);
 void  hole_free(void);
 int   hole_exists(int);

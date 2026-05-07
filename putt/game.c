@@ -176,7 +176,7 @@ static GLfloat *goal_color(int goal_id)
     float tot = 0;
 
     for (ui = curr_party(); ui > 0; ui--)
-        if (curr_stat(ui) && scored[ui] == goal_id) tot++;
+        if (curr_stat(ui) == STAT_SCORED && scored[ui] == goal_id) tot++;
 
     /* Blend ball colors. */
 
@@ -185,7 +185,7 @@ static GLfloat *goal_color(int goal_id)
     goal_c[2] = tot ? 0.f : 1.f;
 
     for (ui = curr_party(); ui > 0; ui--)
-        if (curr_stat(ui) && scored[ui] == goal_id)
+        if (curr_stat(ui) == STAT_SCORED && scored[ui] == goal_id)
         {
             ball_colors = ball_color(ui);
             for (i = 0; i < 3; i++)
@@ -242,7 +242,7 @@ static void game_draw_balls(struct s_rend *rend,
 
     for (ui = curr_party(); ui > 0; ui--)
     {
-        if (curr_stat(ui))
+        if (curr_stat(ui) == STAT_SCORED)
             continue;
 
         ui_ball = files[ui].draw.vary->uv[0];

@@ -274,7 +274,7 @@ int hole_goto(int h, int p)
             {
                 game_ball(i);
                 game_get_pos(ball_p[i], ball_e[i]);
-                stat_v[i] = 0;
+                stat_v[i] = STAT_NONE;
             }
             game_ball(player);
 
@@ -343,7 +343,7 @@ void hole_goal(void)
     else
         audio_play(AUD_SUCCESS, 1.0f);
 
-    stat_v[player] = 1;
+    stat_v[player] = STAT_SCORED;
     done++;
 
     if (done == party)
@@ -360,7 +360,7 @@ void hole_stop(void)
         score_v[hole][player] >= score_v[hole][0] + 3)
     {
         score_v[hole][player] = (score_v[hole][0] > 12 - 3) ? score_v[hole][0] + 3 : 12;
-        stat_v[player] = 1;
+        stat_v[player] = STAT_OUT;
         done++;
     }
 }
@@ -380,7 +380,7 @@ void hole_fall(void)
         score_v[hole][player] >= score_v[hole][0] + 3)
     {
         score_v[hole][player] = (score_v[hole][0] > 12 - 3) ? score_v[hole][0] + 3 : 12;
-        stat_v[player] = 1;
+        stat_v[player] = STAT_OUT;
         done++;
     }
 }
