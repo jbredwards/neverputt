@@ -461,15 +461,26 @@ static int party_enter(struct state *st, struct state *prev, int intent)
         gui_label(id, _("Players?"), GUI_MED, 0, 0);
         gui_space(id);
 
+        int m = MAXPLY / 2;
+
         if ((jd = gui_harray(id)))
         {
-            for (p = MAXPLY - 1; p > 0; p--)
+            for (p = m; p > 0; p--)
             {
                 p1 = gui_state(jd, number(p, 0), GUI_LRG, p + 1, 0);
                 gui_set_color(p1, player_color(p), gui_wht);
             }
 
             gui_focus(p1);
+        }
+
+        if ((jd = gui_harray(id)))
+        {
+            for (p = MAXPLY - 1; p > m; p--)
+            {
+                p1 = gui_state(jd, number(p, 0), GUI_LRG, p + 1, 0);
+                gui_set_color(p1, player_color(p), gui_wht);
+            }
         }
 
         gui_space(id);

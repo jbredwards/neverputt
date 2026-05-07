@@ -42,8 +42,8 @@ static int hole;
 static int party;
 static int player;
 static int count;
-static int done;
-static int aud;
+static int done;             /* Number of players that completed the hole.   */
+static int aud;              /* The last player that was audibly introduced. */
 
 static int         stat_v[MAXPLY];
 static float       ball_p[MAXPLY][3];
@@ -161,12 +161,20 @@ void hole_free(void)
 
 char *hole_player(int p)
 {
-    if (p == 0)               return _("Par");
-
-    if (p == 1 && 1 <= party) return _("P1");
-    if (p == 2 && 2 <= party) return _("P2");
-    if (p == 3 && 3 <= party) return _("P3");
-    if (p == 4 && 4 <= party) return _("P4");
+    if (p == 0)
+        return _("Par");
+    if (p <= party)
+        switch (p)
+        {
+            case 1: return _("P1");
+            case 2: return _("P2");
+            case 3: return _("P3");
+            case 4: return _("P4");
+            case 5: return _("P5");
+            case 6: return _("P6");
+            case 7: return _("P7");
+            case 8: return _("P8");
+        }
 
     return NULL;
 }
@@ -398,6 +406,9 @@ void hole_aud(void)
         case 4:
             audio_play(AUD_PLAYER4, 1.f);
             break;
+        
+        /* TODO: Generate audio files for more players. */
+        default: break;
     }
 
     aud = player;
@@ -415,7 +426,11 @@ static GLubyte player_colors[MAXPLY][4] = {
     { 0xFF, 0x00, 0x00, 0xFF },
     { 0x00, 0xFF, 0x00, 0xFF },
     { 0x00, 0x00, 0xFF, 0xFF },
-    { 0xFF, 0xFF, 0x00, 0xFF }
+    { 0xFF, 0xFF, 0x00, 0xFF },
+    { 0x00, 0xFF, 0xFF, 0xFF },
+    { 0xFF, 0x00, 0xFF, 0xFF },
+    { 0xFF, 0x50, 0x00, 0xFF },
+    { 0x50, 0x00, 0xFF, 0xFF }
 };
 
 GLubyte *player_color(int p)
