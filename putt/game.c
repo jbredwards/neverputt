@@ -158,6 +158,74 @@ void game_free(void)
 
 /*---------------------------------------------------------------------------*/
 
+/* https://stackoverflow.com/a/6930407 */
+static void hsv2rgb(const GLfloat *hsv, GLfloat *rgb)
+{
+    GLfloat h, s, v, p, q, t, ff;
+    int i;
+
+    h = hsv[0];
+    s = hsv[1];
+    v = hsv[2];
+
+    if (s <= 0) {
+        rgb[0] = rgb[1] = rgb[2] = v;
+        return;
+    }
+
+    i = (int)h;
+
+    ff = h - i;
+    p  = v * (1 - s);
+    q  = v * (1 - s * ff);
+    t  = v * (1 - s * (1 - ff));
+
+    switch (i)
+    {
+        case 0:
+            rgb[0] = v; rgb[1] = t; rgb[2] = p; break;
+        case 1:
+            rgb[0] = q; rgb[1] = v; rgb[2] = p; break;
+        case 2:
+            rgb[0] = p; rgb[1] = v; rgb[2] = t; break;
+        case 3:
+            rgb[0] = p; rgb[1] = q; rgb[2] = v; break;
+        case 4:
+            rgb[0] = t; rgb[1] = p; rgb[2] = v; break;
+        default:
+            rgb[0] = v; rgb[1] = p; rgb[2] = q; break;
+    }
+}
+
+/* https://stackoverflow.com/a/6930407 */
+static void rgb2hsv(const GLfloat *rgb, GLfloat *hsv)
+{
+    GLfloat min, max, delta;
+
+    min = MIN(MIN(rgb[0], rgb[1]), rgb[2]);
+    max = MAX(MAX(rgb[0], rgb[1]), rgb[2]);
+
+    hsv[2] = max;
+    delta = max - min;
+    
+    if (delta < 1e-4)
+    {
+        hsv[0] = 0;
+        hsv[1] = 0;
+        return;
+    }
+    else if (rgb[0] >= max)
+        hsv[0] = (rgb[1] - rgb[2]) / delta;
+    else if (rgb[1] >= max)
+        hsv[0] = (rgb[2] - rgb[0]) / delta + 2;
+    else
+        hsv[0] = (rgb[0] - rgb[1]) / delta + 4;
+
+    hsv[1] = delta / max;
+}
+
+/*---------------------------------------------------------------------------*/
+
 static int save_goal_id(struct b_goal *goal)
 {
     if (!goal)
@@ -170,7 +238,6 @@ static int save_goal_id(struct b_goal *goal)
 static GLfloat *goal_color(int goal_id)
 {
     static GLfloat goal_c[4] = {1.f, 1.f, 1.f, 1.f};
-    GLfloat *ball_colors;
     
     int ui, i;
     float tot = 0;
@@ -184,14 +251,19 @@ static GLfloat *goal_color(int goal_id)
     goal_c[1] = tot ? 0.f : 1.f;
     goal_c[2] = tot ? 0.f : 1.f;
 
+    if (!tot)
+        return goal_c;
+
+    GLfloat ball_colors[3];
     for (ui = curr_party(); ui > 0; ui--)
         if (curr_stat(ui) == STAT_SCORED && scored[ui] == goal_id)
         {
-            ball_colors = ball_color(ui);
+            rgb2hsv(ball_color(ui), ball_colors);
             for (i = 0; i < 3; i++)
                 goal_c[i] += ball_colors[i] / tot;
         }
 
+    hsv2rgb(goal_c, goal_c);
     return goal_c;
 }
 
